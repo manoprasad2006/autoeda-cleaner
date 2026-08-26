@@ -1,17 +1,3 @@
-"""
-IntelliData AI — application entry point.
-
-This file's only job right now is to:
-1. Load configuration.
-2. Set up logging.
-3. Configure the Streamlit page.
-4. Show a placeholder home screen.
-
-Feature pages (upload, profiling, cleaning, etc.) get added in later
-phases as files under pages/ — Streamlit auto-discovers them and turns
-them into sidebar navigation entries.
-"""
-
 import streamlit as st
 
 from utils.config import load_settings
