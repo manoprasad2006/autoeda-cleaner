@@ -28,8 +28,12 @@ class MLReadinessResult:
 _SEVERITY_PENALTY = {"high": 15, "medium": 8, "low": 3}
 
 
-def _check_missing_values(profile: DatasetProfile) -> ReadinessIssue | None:
-    cols_with_missing = [c.name for c in profile.columns if c.missing_count > 0]
+def _check_missing_values(
+    profile: DatasetProfile, exclude: str | None = None
+) -> ReadinessIssue | None:
+    cols_with_missing = [
+        c.name for c in profile.columns if c.missing_count > 0 and c.name != exclude
+    ]
     if not cols_with_missing:
         return None
     return ReadinessIssue(
@@ -43,25 +47,29 @@ def _check_missing_values(profile: DatasetProfile) -> ReadinessIssue | None:
     )
 
 
-def _check_encoding_needed(profile: DatasetProfile) -> ReadinessIssue | None:
-    if not profile.categorical_columns:
+def _check_encoding_needed(
+    profile: DatasetProfile, exclude: str | None = None
+) -> ReadinessIssue | None:
+    categorical_features = [c for c in profile.categorical_columns if c != exclude]
+    if not categorical_features:
         return None
     return ReadinessIssue(
         category="Encoding Needed",
         severity="medium",
         description=(
-            f"{len(profile.categorical_columns)} categorical column(s) need "
+            f"{len(categorical_features)} categorical column(s) need "
             f"encoding (e.g. one-hot or label encoding) before most ML "
             f"algorithms can use them."
         ),
-        affected_columns=profile.categorical_columns,
+        affected_columns=categorical_features,
     )
 
 
-def _check_scaling_needed(eda: EDAResult) -> ReadinessIssue | None:
-    if len(eda.numeric_stats) < 2:
+def _check_scaling_needed(eda: EDAResult, exclude: str | None = None) -> ReadinessIssue | None:
+    numeric_features = [s for s in eda.numeric_stats if s.name != exclude]
+    if len(numeric_features) < 2:
         return None
-    ranges = [(s.name, s.max - s.min) for s in eda.numeric_stats if s.max > s.min]
+    ranges = [(s.name, s.max - s.min) for s in numeric_features if s.max > s.min]
     if len(ranges) < 2:
         return None
 
@@ -82,10 +90,14 @@ def _check_scaling_needed(eda: EDAResult) -> ReadinessIssue | None:
         affected_columns=[name for name, _ in ranges],
     )
 
-def _check_multicollinearity(eda: EDAResult) -> ReadinessIssue | None:
-    """Near-duplicate numeric features (correlation >= 0.9) can destabilize
-    linear models and waste model capacity on redundant information."""
-    near_duplicates = [p for p in eda.correlation_pairs if abs(p.correlation) >= 0.9]
+
+def _check_multicollinearity(
+    eda: EDAResult, exclude: str | None = None
+) -> ReadinessIssue | None:
+    near_duplicates = [
+        p for p in eda.correlation_pairs
+        if abs(p.correlation) >= 0.9 and exclude not in (p.column_a, p.column_b)
+    ]
     if not near_duplicates:
         return None
 
@@ -122,8 +134,13 @@ def _check_outliers(quality: QualityScore) -> ReadinessIssue | None:
     )
 
 
-def _check_unusable_columns(profile: DatasetProfile) -> ReadinessIssue | None:
-    unusable = profile.constant_columns + profile.high_cardinality_columns
+def _check_unusable_columns(
+    profile: DatasetProfile, exclude: str | None = None
+) -> ReadinessIssue | None:
+    unusable = [
+        c for c in (profile.constant_columns + profile.high_cardinality_columns)
+        if c != exclude
+    ]
     if not unusable:
         return None
     return ReadinessIssue(
@@ -140,8 +157,6 @@ def _check_unusable_columns(profile: DatasetProfile) -> ReadinessIssue | None:
 
 
 def _infer_task_type(df: pd.DataFrame, target_column: str) -> str:
-    """Best-effort guess at whether the target looks like a classification
-    or regression problem, based purely on its data type and cardinality."""
     series = df[target_column].dropna()
     if pd.api.types.is_numeric_dtype(series) and series.nunique() > 15:
         return "regression"
@@ -151,7 +166,7 @@ def _infer_task_type(df: pd.DataFrame, target_column: str) -> str:
 def _check_class_imbalance(df: pd.DataFrame, target_column: str) -> ReadinessIssue | None:
     series = df[target_column].dropna()
     if series.nunique() < 2 or series.nunique() > 15:
-        return None  # not a plausible classification target
+        return None
 
     counts = series.value_counts()
     majority_pct = counts.iloc[0] / len(series) * 100
@@ -172,21 +187,37 @@ def _check_class_imbalance(df: pd.DataFrame, target_column: str) -> ReadinessIss
     )
 
 
-def _check_target_leakage(eda: EDAResult, target_column: str) -> ReadinessIssue | None:
-    """A feature correlated almost perfectly (>= 0.98) with the target is
-    suspicious -- it may BE the target in disguise (e.g. a column
-    computed from the target itself), which would make a model look
-    artificially perfect during testing and fail in the real world."""
-    suspicious = [
-        p for p in eda.correlation_pairs
-        if target_column in (p.column_a, p.column_b) and abs(p.correlation) >= 0.98
-    ]
-    if not suspicious:
+def _check_target_leakage(
+    df: pd.DataFrame, eda: EDAResult, target_column: str
+) -> ReadinessIssue | None:
+    target_series = df[target_column]
+
+    if pd.api.types.is_numeric_dtype(target_series):
+        suspicious_pairs = [
+            p for p in eda.correlation_pairs
+            if target_column in (p.column_a, p.column_b) and abs(p.correlation) >= 0.98
+        ]
+        other_cols = [
+            p.column_b if p.column_a == target_column else p.column_a
+            for p in suspicious_pairs
+        ]
+    else:
+        unique_values = target_series.dropna().unique()
+        if len(unique_values) != 2:
+            return None  # not binary -- see docstring on why we skip rather than guess
+
+        encoded_target = target_series.map({unique_values[0]: 0, unique_values[1]: 1})
+        other_cols = []
+        for stat in eda.numeric_stats:
+            if stat.name == target_column:
+                continue
+            corr = df[stat.name].corr(encoded_target)
+            if pd.notna(corr) and abs(corr) >= 0.98:
+                other_cols.append(stat.name)
+
+    if not other_cols:
         return None
 
-    other_cols = [
-        p.column_b if p.column_a == target_column else p.column_a for p in suspicious
-    ]
     return ReadinessIssue(
         category="Possible Target Leakage",
         severity="high",
@@ -199,6 +230,7 @@ def _check_target_leakage(eda: EDAResult, target_column: str) -> ReadinessIssue 
         affected_columns=other_cols,
     )
 
+
 def assess_ml_readiness(
     df: pd.DataFrame,
     profile: DatasetProfile,
@@ -209,12 +241,12 @@ def assess_ml_readiness(
     issues: list[ReadinessIssue] = []
 
     for check in (
-        _check_missing_values(profile),
-        _check_encoding_needed(profile),
-        _check_scaling_needed(eda),
-        _check_multicollinearity(eda),
+        _check_missing_values(profile, exclude=target_column),
+        _check_encoding_needed(profile, exclude=target_column),
+        _check_scaling_needed(eda, exclude=target_column),
+        _check_multicollinearity(eda, exclude=target_column),
         _check_outliers(quality),
-        _check_unusable_columns(profile),
+        _check_unusable_columns(profile, exclude=target_column),
     ):
         if check is not None:
             issues.append(check)
@@ -226,7 +258,7 @@ def assess_ml_readiness(
             if imbalance_issue is not None:
                 issues.append(imbalance_issue)
 
-        leakage_issue = _check_target_leakage(eda, target_column)
+        leakage_issue = _check_target_leakage(df, eda, target_column)
         if leakage_issue is not None:
             issues.append(leakage_issue)
     else:
