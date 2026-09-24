@@ -40,7 +40,7 @@ def _status_label(score: float) -> tuple[str, str]:
 label, status = _status_label(quality.overall_score)
 
 st.metric("Overall Data Quality Score", f"{quality.overall_score}%")
-getattr(st, status)(f"**{label}** — {quality.overall_score}% overall quality")
+getattr(st, status)(f"**{label}** â€” {quality.overall_score}% overall quality")
 
 st.subheader("Score Breakdown")
 

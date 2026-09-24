@@ -61,8 +61,8 @@ class CleaningLog:
         return pd.DataFrame([vars(a) for a in self.actions])
 
 
-    #handling missing values
-    def handle_missing_values(df: pd.DataFrame, log: CleaningLog) -> pd.DataFrame:
+#handling missing values
+def handle_missing_values(df: pd.DataFrame, log: CleaningLog) -> pd.DataFrame:
     df = df.copy()
 
     for col in df.columns:

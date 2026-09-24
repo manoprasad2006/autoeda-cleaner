@@ -20,7 +20,7 @@ init_session_state()
 st.title("Upload Dataset")
 st.caption(
     f"Supported formats: {', '.join(ext.lstrip('.').upper() for ext in SUPPORTED_EXTENSIONS)} "
-    f"· Max size: {settings.max_upload_mb}MB"
+    f"Â· Max size: {settings.max_upload_mb}MB"
 )
 
 uploaded_file = st.file_uploader(
@@ -51,7 +51,7 @@ if uploaded_file is not None:
 
     except Exception as exc:  # noqa: BLE001
         st.error(
-            "Couldn't read this file — it may be corrupted or not "
+            "Couldn't read this file â€” it may be corrupted or not "
             "actually formatted as its extension suggests."
         )
         logger.error("Unexpected load failure | file=%s", uploaded_file.name, exc_info=exc)

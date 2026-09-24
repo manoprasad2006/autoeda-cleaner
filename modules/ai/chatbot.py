@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 
 from modules.ai.client import GeminiClient
-from modules.ai.prompt_templates import pluralize
+from modules.ai.executive_summary import _plural
 from modules.cleaner import CleaningLog
 from modules.eda import EDAResult
 from modules.ml_readiness import MLReadinessResult
@@ -46,8 +46,8 @@ def build_system_context(
     return _SYSTEM_CONTEXT_TEMPLATE.format(
         n_rows=profile.n_rows,
         n_columns=profile.n_columns,
-        row_word=pluralize(profile.n_rows, "row"),
-        column_word=pluralize(profile.n_columns, "column"),
+        row_word=_plural(profile.n_rows, "row"),
+        column_word=_plural(profile.n_columns, "column"),
         numeric_cols=", ".join(profile.numerical_columns) or "none",
         categorical_cols=", ".join(profile.categorical_columns) or "none",
         date_cols=", ".join(profile.date_columns) or "none",

@@ -39,7 +39,7 @@ if not has_dataset():
 
 if not has_cleaned_dataset():
     st.info(
-        "Run automatic cleaning first on the **Cleaning** page — the "
+        "Run automatic cleaning first on the **Cleaning** page â€” the "
         "executive summary describes what was found and fixed, so it "
         "needs a completed cleaning pass to work from."
     )

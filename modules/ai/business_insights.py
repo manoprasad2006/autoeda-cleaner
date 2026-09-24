@@ -9,7 +9,7 @@ _INSTRUCTION = (
     "Below are statistical findings from a cleaned dataset: correlations "
     "between numeric columns, column distributions, and categorical "
     "breakdowns. Identify 3-5 business-relevant insights a stakeholder "
-    "would care about — for example: notable relationships between "
+    "would care about â€” for example: notable relationships between "
     "metrics, columns with unusual concentration or spread, or dominant "
     "categories. For each insight, state the finding and one plausible "
     "business interpretation. Be clear that interpretations are "
@@ -83,7 +83,7 @@ def _fallback_insights(quality: QualityScore, eda: EDAResult) -> str:
         if stat.top_value_pct >= 50:
             bullets.append(
                 f"- **{stat.name}** is dominated by '{stat.top_value}' "
-                f"({stat.top_value_pct}% of records) — worth checking "
+                f"({stat.top_value_pct}% of records) â€” worth checking "
                 f"whether this concentration is expected."
             )
 

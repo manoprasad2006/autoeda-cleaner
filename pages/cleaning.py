@@ -51,7 +51,7 @@ if not has_cleaned_dataset():
 cleaned_df = st.session_state["cleaned_dataset"]
 log = get_cleaning_log()
 
-st.success(f"Cleaning complete — {len(log.actions)} action(s) taken.")
+st.success(f"Cleaning complete â€” {len(log.actions)} action(s) taken.")
 
 
 @st.cache_data(show_spinner="Comparing quality scores...")
@@ -83,7 +83,7 @@ st.subheader("Cleaning Log")
 log_df = log.to_dataframe()
 
 if log_df.empty:
-    st.info("No cleaning actions were necessary — the dataset was already clean.")
+    st.info("No cleaning actions were necessary â€” the dataset was already clean.")
 else:
     st.dataframe(
         log_df[["column", "issue", "method", "rows_affected", "reason"]],
@@ -113,7 +113,7 @@ else:
     if has_cleaning_explanations():
         explanations = get_cleaning_explanations()
         for i, action in enumerate(log.actions):
-            with st.expander(f"{action.column} — {action.issue}"):
+            with st.expander(f"{action.column} â€” {action.issue}"):
                 st.write(explanations.get(action_key(action, i), action.reason))
 
 st.subheader("Download Cleaned Dataset")

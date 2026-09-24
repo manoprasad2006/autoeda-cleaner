@@ -8,13 +8,13 @@ from modules.profiler import DatasetProfile
 _INSTRUCTION = (
     "Below are the columns and statistical findings for a cleaned "
     "dataset. Suggest 3-5 concrete feature engineering ideas that could "
-    "improve analysis or machine learning on this specific data — for "
+    "improve analysis or machine learning on this specific data â€” for "
     "example: binning a numeric column into groups, a ratio between two "
     "related columns, an interaction term, or a derived feature based "
     "on column names and their likely meaning. For each suggestion, "
     "name the exact columns involved and briefly explain the reasoning. "
     "Only suggest features that plausibly fit these specific column "
-    "names — do not invent columns that aren't listed. Format as a "
+    "names â€” do not invent columns that aren't listed. Format as a "
     "markdown bullet list."
 )
 
@@ -62,7 +62,7 @@ def _fallback_suggestions(profile: DatasetProfile, eda: EDAResult) -> str:
     for stat in binning_candidates:
         unique_count = col_lookup[stat.name].unique_count
         bullets.append(
-            f"- **Bin `{stat.name}`** into groups (e.g. low/medium/high) — "
+            f"- **Bin `{stat.name}`** into groups (e.g. low/medium/high) â€” "
             f"it ranges from {stat.min} to {stat.max} with {unique_count} "
             f"distinct values, which may be easier to analyze as categories."
         )
@@ -71,7 +71,7 @@ def _fallback_suggestions(profile: DatasetProfile, eda: EDAResult) -> str:
         top = eda.correlation_pairs[0]
         bullets.append(
             f"- **Create an interaction feature** between `{top.column_a}` and "
-            f"`{top.column_b}` (e.g. their product or ratio) — they already show "
+            f"`{top.column_b}` (e.g. their product or ratio) â€” they already show "
             f"a {top.strength} relationship ({top.correlation}), so a combined "
             f"feature may capture their joint effect more directly."
         )
@@ -79,7 +79,7 @@ def _fallback_suggestions(profile: DatasetProfile, eda: EDAResult) -> str:
     skewed = [s for s in eda.numeric_stats if abs(s.skewness) > 1][:2]
     for stat in skewed:
         bullets.append(
-            f"- **Log-transform `{stat.name}`** — it is notably skewed "
+            f"- **Log-transform `{stat.name}`** â€” it is notably skewed "
             f"(skewness={stat.skewness}), and a log transform often makes "
             f"skewed distributions more suitable for linear models."
         )
@@ -87,14 +87,14 @@ def _fallback_suggestions(profile: DatasetProfile, eda: EDAResult) -> str:
     for col in profile.date_columns[:2]:
         bullets.append(
             f"- **Extract date parts from `{col}`** (year, month, day of "
-            f"week) — raw dates aren't directly usable by most models, but "
+            f"week) â€” raw dates aren't directly usable by most models, but "
             f"their components often are."
         )
 
     for col in profile.high_cardinality_columns[:2]:
         bullets.append(
             f"- **Use frequency encoding (or group rare categories) for "
-            f"`{col}`** — it has too many distinct values for standard "
+            f"`{col}`** â€” it has too many distinct values for standard "
             f"one-hot encoding to work well."
         )
 

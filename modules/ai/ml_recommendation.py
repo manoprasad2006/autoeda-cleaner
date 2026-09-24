@@ -70,7 +70,7 @@ def _fallback_recommendations(readiness: MLReadinessResult) -> str:
 
     bullets = []
     for name, reason in algorithms:
-        bullets.append(f"- **{name}** — {reason}.")
+        bullets.append(f"- **{name}** â€” {reason}.")
 
     if readiness.inferred_task == "classification":
         metric = (
@@ -80,11 +80,11 @@ def _fallback_recommendations(readiness: MLReadinessResult) -> str:
         )
         bullets.append(f"- Suggested evaluation: {metric}.")
     elif readiness.inferred_task == "regression":
-        bullets.append("- Suggested evaluation: RMSE and R².")
+        bullets.append("- Suggested evaluation: RMSE and RÂ².")
 
     if has_multicollinearity:
         bullets.append(
-            "- Note: multicollinearity was detected — tree-based models "
+            "- Note: multicollinearity was detected â€” tree-based models "
             "(Random Forest) are more robust to this than linear models."
         )
 
