@@ -11,7 +11,7 @@ import random
 from typing import Any
 import streamlit as st
 
-from modules.ai.client import GeminiClient
+from modules.ai.client import GroqRotationClient, get_ai_client
 from utils.config import load_settings
 
 
@@ -287,11 +287,10 @@ def get_ai_decision_advice(query: str, wf_state: Any) -> str:
     }
     actual_question = query_map.get(query.lower(), query)
 
-    # 1. Attempt Live Gemini API
-    settings = load_settings()
-    if settings.gemini_api_key:
+    # 1. Attempt AI Client (Groq Rotation or Gemini)
+    ai_client = get_ai_client()
+    if ai_client is not None:
         try:
-            client = GeminiClient(api_key=settings.gemini_api_key, model=settings.gemini_model)
             prompt = f"""You are Tom Lizard 🦎, an expert data scientist and friendly AI pet companion in IntelliData Studio.
 You give concise, actionable, razor-sharp advice to help the user make safe, governed data decisions.
 
@@ -314,9 +313,13 @@ Instructions:
 3. Keep the tone warm, smart, and enthusiastic with 1-2 lizard emojis 🦎.
 4. If decisions carry data-loss risk, remind the user about human-in-the-loop review.
 """
-            res = client.generate(prompt, max_retries=2)
+            res = ai_client.generate(prompt, max_retries=3)
             if res.success and res.text:
-                return f"🦎 **Tom's Advice (Gemini AI):**\n\n{res.text}"
+                if isinstance(ai_client, GroqRotationClient):
+                    provider_tag = f"Groq AI · Key {ai_client.last_key_number}"
+                else:
+                    provider_tag = "Gemini AI"
+                return f"🦎 **Tom's Advice ({provider_tag}):**\n\n{res.text}"
         except Exception:
             pass  # Fall back to heuristic rule
 
@@ -404,37 +407,45 @@ def render_pet_assistant() -> None:
 
     # Interactive decision assistant drawer
     with st.expander("💬 Ask Tom (AI Decision Helper)", expanded=False):
-        st.caption("Ask Tom about data quality, feature prep, or ML trade-offs:")
+        settings = load_settings()
+        if settings.has_groq:
+            st.caption(f"⚡ Powered by Groq AI ({len(settings.groq_keys)} rotated keys)")
+        elif settings.gemini_api_key:
+            st.caption("⚡ Powered by Gemini AI")
+        else:
+            st.caption("Offline mode · Rule-based decision assistant")
+
+        provider_name = "Groq" if settings.has_groq else "AI"
 
         # Quick preset buttons
         c1, c2 = st.columns(2)
-        if c1.button("⚡ Outliers?", key="tom_q_outliers", help="Ask Gemini advice on capping outliers"):
-            with st.spinner("Tom is analyzing with Gemini..."):
+        if c1.button("⚡ Outliers?", key="tom_q_outliers", help=f"Ask {provider_name} advice on capping outliers"):
+            with st.spinner(f"Tom is analyzing with {provider_name}..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("outliers", wf_state)
             st.session_state["tom_manual_anim"] = "review"
-            st.session_state["tom_speech_override"] = "I analyzed your outliers with Gemini! Check below 🦎"
+            st.session_state["tom_speech_override"] = f"Analyzed your outliers with {provider_name}! Check below 🦎"
             st.rerun()
 
-        if c2.button("❓ Missing Data?", key="tom_q_missing", help="Ask Gemini advice on missing values"):
-            with st.spinner("Tom is analyzing with Gemini..."):
+        if c2.button("❓ Missing Data?", key="tom_q_missing", help=f"Ask {provider_name} advice on missing values"):
+            with st.spinner(f"Tom is analyzing with {provider_name}..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("missing", wf_state)
             st.session_state["tom_manual_anim"] = "waiting"
-            st.session_state["tom_speech_override"] = "Here is my advice on handling missing data! 🦎"
+            st.session_state["tom_speech_override"] = f"Here is my {provider_name} advice on handling missing data! 🦎"
             st.rerun()
 
         c3, c4 = st.columns(2)
-        if c3.button("🤖 ML Strategy?", key="tom_q_ml", help="Ask Gemini advice on machine learning"):
-            with st.spinner("Tom is analyzing with Gemini..."):
+        if c3.button("🤖 ML Strategy?", key="tom_q_ml", help=f"Ask {provider_name} advice on machine learning"):
+            with st.spinner(f"Tom is analyzing with {provider_name}..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("ml", wf_state)
             st.session_state["tom_manual_anim"] = "jumping"
-            st.session_state["tom_speech_override"] = "Recommended ML modeling strategy ready! 🌟"
+            st.session_state["tom_speech_override"] = f"Recommended ML strategy from {provider_name} ready! 🌟"
             st.rerun()
 
-        if c4.button("💡 Next Steps?", key="tom_q_next", help="Ask Gemini advice on next steps"):
-            with st.spinner("Tom is analyzing with Gemini..."):
+        if c4.button("💡 Next Steps?", key="tom_q_next", help=f"Ask {provider_name} advice on next steps"):
+            with st.spinner(f"Tom is analyzing with {provider_name}..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("next", wf_state)
             st.session_state["tom_manual_anim"] = "running-right"
-            st.session_state["tom_speech_override"] = "Got your next pipeline roadmap ready! 🚀"
+            st.session_state["tom_speech_override"] = f"Got your next pipeline roadmap from {provider_name}! 🚀"
             st.rerun()
 
         # Free-form custom question input
@@ -444,12 +455,12 @@ def render_pet_assistant() -> None:
             placeholder="e.g. Should I normalize Age and Fare?",
             key="tom_custom_q_input",
         )
-        if st.button("Ask Gemini 🚀", key="tom_ask_custom_btn"):
+        if st.button(f"Ask {provider_name} 🚀", key="tom_ask_custom_btn"):
             if custom_q.strip():
-                with st.spinner("Tom is consulting Gemini..."):
+                with st.spinner(f"Tom is consulting {provider_name}..."):
                     st.session_state["tom_advice"] = get_ai_decision_advice(custom_q.strip(), wf_state)
                 st.session_state["tom_manual_anim"] = "jumping"
-                st.session_state["tom_speech_override"] = f"Here is my Gemini insight on '{custom_q[:30]}...' 🦎"
+                st.session_state["tom_speech_override"] = f"Here is my {provider_name} insight on '{custom_q[:30]}...' 🦎"
                 st.rerun()
 
         # Display advice if available

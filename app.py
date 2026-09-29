@@ -91,9 +91,10 @@ with st.sidebar:
 with st.sidebar:
     st.divider()
     st.caption("Import → Prepare → Explore → Share")
-    st.caption(
-        "AI available · opt-in per dataset"
-        if settings.gemini_api_key
-        else "Local analytics · AI key not configured"
-    )
+    if settings.has_groq:
+        st.caption(f"⚡ Groq AI active · {len(settings.groq_keys)} keys rotating")
+    elif settings.gemini_api_key:
+        st.caption("✦ Gemini AI active")
+    else:
+        st.caption("Local analytics · AI key not configured")
 page.run()

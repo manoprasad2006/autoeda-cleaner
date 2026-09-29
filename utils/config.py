@@ -28,6 +28,8 @@ class Settings:
     # --- AI ---
     gemini_api_key: str
     gemini_model: str
+    groq_keys: tuple[str, ...]
+    groq_model: str
 
     # --- App behavior ---
     app_env: str
@@ -44,6 +46,22 @@ class Settings:
     @property
     def is_production(self) -> bool:
         return self.app_env.lower() == "production"
+
+    @property
+    def has_groq(self) -> bool:
+        return len(self.groq_keys) > 0
+
+    @property
+    def has_ai(self) -> bool:
+        return self.has_groq or bool(self.gemini_api_key)
+
+    @property
+    def preferred_provider(self) -> str:
+        if self.has_groq:
+            return "groq"
+        if self.gemini_api_key:
+            return "gemini"
+        return "none"
 
 
 def _get_int(name: str, default: int) -> int:
@@ -68,9 +86,17 @@ def load_settings() -> Settings:
     interaction, so we rely on st.cache_resource at the call site
     instead of hiding caching logic inside config.
     """
+    groq_keys_list: list[str] = []
+    for var in ("GROQ_1", "GROQ_2", "GROQ_3", "GROQ_API_KEY"):
+        val = os.getenv(var, "").strip()
+        if val and val not in groq_keys_list:
+            groq_keys_list.append(val)
+
     settings = Settings(
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
         gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
+        groq_keys=tuple(groq_keys_list),
+        groq_model=os.getenv("GROQ_MODEL", "openai/gpt-oss-120b"),
         app_env=os.getenv("APP_ENV", "development"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         max_upload_mb=max(1, min(50, _get_int("MAX_UPLOAD_MB", 50))),

@@ -17,8 +17,9 @@ statsmodels==0.14.2   # required by plotly's trendline="ols" feature
 matplotlib==3.9.2
 seaborn==0.13.2
 
-# --- AI (Gemini) ---
+# --- AI (Gemini & Groq) ---
 google-genai==1.74.0
+groq==1.7.0
 
 # --- Reports ---
 reportlab==4.2.2

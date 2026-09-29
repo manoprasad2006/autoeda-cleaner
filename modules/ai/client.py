@@ -88,3 +88,88 @@ class GeminiClient:
         return AIResponse(
             success=False, text="", error=last_error, attempts=max_retries
         )
+
+
+class GroqRotationClient:
+    """Thread-safe Groq client rotating across multiple API keys with automatic failover."""
+
+    def __init__(
+        self,
+        api_keys: list[str] | tuple[str, ...],
+        model: str = "openai/gpt-oss-120b",
+        fallback_models: list[str] | None = None,
+    ):
+        import threading
+        self.api_keys = [k.strip() for k in api_keys if k and k.strip()]
+        self.model = model
+        self.fallback_models = fallback_models or ["openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+        self._index = 0
+        self._lock = threading.Lock()
+        self.last_key_number = 1
+
+    def _next_key_info(self) -> tuple[str, int]:
+        with self._lock:
+            if not self.api_keys:
+                return "", 0
+            idx = self._index % len(self.api_keys)
+            key = self.api_keys[idx]
+            self._index = (self._index + 1) % len(self.api_keys)
+            self.last_key_number = idx + 1
+            return key, idx + 1
+
+    def generate(self, prompt: str, max_retries: int = 3) -> AIResponse:
+        from groq import Groq
+
+        if not self.api_keys:
+            return AIResponse(success=False, text="", error="No Groq API keys configured.")
+
+        models_to_try = [self.model] + [m for m in self.fallback_models if m != self.model]
+        attempts = 0
+        last_error = ""
+
+        # Cycle through keys up to max_retries times
+        for _ in range(max(1, min(max_retries, len(self.api_keys)))):
+            api_key, key_num = self._next_key_info()
+            if not api_key:
+                continue
+
+            try:
+                client = Groq(api_key=api_key)
+                for m in models_to_try:
+                    attempts += 1
+                    try:
+                        resp = client.chat.completions.create(
+                            messages=[{"role": "user", "content": prompt}],
+                            model=m,
+                            temperature=0.2,
+                            max_tokens=2500,
+                        )
+                        text = (resp.choices[0].message.content or "").strip()
+                        if text:
+                            return AIResponse(success=True, text=text, attempts=attempts)
+                    except Exception as exc:
+                        last_error = str(exc)
+                        # If model not found or rate limit, try fallback model or next key
+                        continue
+            except Exception as exc:
+                last_error = str(exc)
+                continue
+
+        return AIResponse(
+            success=False,
+            text="",
+            error=f"Groq API error across rotated keys: {last_error}",
+            attempts=attempts,
+        )
+
+
+def get_ai_client() -> GroqRotationClient | GeminiClient | None:
+    """Return configured AI client prioritizing Groq with key rotation, then Gemini."""
+    from utils.config import load_settings
+
+    settings = load_settings()
+    if settings.has_groq:
+        return GroqRotationClient(api_keys=settings.groq_keys, model=settings.groq_model)
+    elif settings.gemini_api_key:
+        return GeminiClient(api_key=settings.gemini_api_key, model=settings.gemini_model)
+    return None
