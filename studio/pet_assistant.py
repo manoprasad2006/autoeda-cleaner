@@ -1,15 +1,17 @@
 """Tom Lizard AI Pet Assistant component for IntelliData Studio.
 Integrates the OpenPets 'tom-lizard' sprite sheet with contextual animations,
-speech bubbles, and decision-making assistance based on active workflow state.
+speech bubbles, and decision-making assistance powered by live Gemini API.
 """
 from __future__ import annotations
 
 import base64
 from functools import lru_cache
 import os
+import random
 from typing import Any
 import streamlit as st
 
+from modules.ai.client import GeminiClient
 from utils.config import load_settings
 
 
@@ -59,13 +61,17 @@ def get_pet_css(b64_img: str) -> str:
         "    display: flex;",
         "    align-items: center;",
         "    gap: 10px;",
-        "    background: linear-gradient(135deg, rgba(20, 29, 48, 0.75), rgba(11, 16, 32, 0.9));",
-        "    border: 1px solid rgba(102, 224, 194, 0.25);",
+        "    background: linear-gradient(135deg, rgba(20, 29, 48, 0.85), rgba(11, 16, 32, 0.95));",
+        "    border: 1px solid rgba(102, 224, 194, 0.3);",
         "    border-radius: 12px;",
         "    padding: 8px 10px;",
         "    margin: 8px 0 14px 0;",
-        "    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);",
+        "    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);",
         "    position: relative;",
+        "    transition: border-color 0.25s ease;",
+        "}",
+        ".tom-pet-container:hover {",
+        "    border-color: rgba(102, 224, 194, 0.65);",
         "}",
         ".tom-pet-avatar {",
         f"    width: {DISPLAY_W}px;",
@@ -78,21 +84,29 @@ def get_pet_css(b64_img: str) -> str:
         "    image-rendering: crisp-edges;",
         "    image-rendering: pixelated;",
         "    cursor: pointer;",
-        "    transition: transform 0.2s ease;",
+        "    transition: transform 0.2s cubic-bezier(0.175, 0.885, 0.32, 1.275), filter 0.2s ease;",
         "}",
         ".tom-pet-avatar:hover {",
-        "    transform: scale(1.08);",
+        "    transform: scale(1.12) translateY(-2px);",
+        "    filter: drop-shadow(0 0 8px rgba(102, 224, 194, 0.6));",
+        "}",
+        ".tom-pet-avatar:active {",
+        "    transform: scale(0.96);",
         "}",
         ".tom-pet-speech {",
         "    font-size: 11px;",
         "    line-height: 1.35;",
         "    color: #E8EDF7;",
-        "    background: rgba(14, 22, 38, 0.85);",
+        "    background: rgba(14, 22, 38, 0.9);",
         "    border: 1px solid rgba(102, 224, 194, 0.35);",
         "    border-radius: 8px;",
         "    padding: 6px 9px;",
         "    position: relative;",
         "    flex-grow: 1;",
+        "    min-height: 48px;",
+        "    display: flex;",
+        "    flex-direction: column;",
+        "    justify-content: center;",
         "}",
         ".tom-pet-speech::before {",
         "    content: '';",
@@ -138,16 +152,36 @@ def get_pet_css(b64_img: str) -> str:
     return "\n".join(css_rules)
 
 
-def determine_pet_state(wf_state: Any) -> tuple[str, str, str]:
+def determine_pet_state(wf_state: Any, cycle_index: int = 0) -> tuple[str, str, str]:
     """Inspect current workflow state and determine Tom's animation, badge, and message.
+    Supports dynamic ambient animations across all 9 sprite rows.
     Returns: (animation_name, badge_label, message)
     """
     if wf_state is None:
-        return (
-            "waving",
-            "Tom Lizard · Ready",
-            "Hey there! I'm Tom, your Data Governance Assistant! Upload a dataset or load the demo workspace to get started 🦎",
-        )
+        # Dynamic rotation when no dataset is loaded
+        empty_states = [
+            (
+                "waving",
+                "Tom Lizard · Ready",
+                "Hey there! I'm Tom, your Data Governance Assistant! Upload a dataset or load the demo workspace 🦎",
+            ),
+            (
+                "jumping",
+                "Tom Lizard · Energetic",
+                "Ready to explore some data? Drag & drop a CSV or Excel in Import Data! 🚀",
+            ),
+            (
+                "running-right",
+                "Tom Lizard · Active",
+                "Warming up my data crunching muscles! Let's build governed pipelines! 🏃💨",
+            ),
+            (
+                "waiting",
+                "Tom Lizard · Curious",
+                "Waiting for some exciting numbers and tables to inspect! 📊",
+            ),
+        ]
+        return empty_states[cycle_index % len(empty_states)]
 
     status = getattr(wf_state, "status", "idle")
     stage = getattr(wf_state, "current_stage", "intake")
@@ -193,76 +227,134 @@ def determine_pet_state(wf_state: Any) -> tuple[str, str, str]:
             "Mission accomplished! All pipeline steps completed and verified. Ready for report export! 🎉",
         )
 
-    # 5. Active dataset exists and cleaned
+    # 5. Active dataset exists and cleaned (v1+)
     active_ver = getattr(wf_state, "active_version_id", "v0")
     if active_ver != "v0":
-        return (
-            "waving",
-            f"Tom Lizard · Version {active_ver}",
-            f"Dataset is clean and active at version {active_ver}. Check out Chart Studio or ML Readiness!",
-        )
+        cleaned_states = [
+            ("jumping", f"Tom Lizard · Version {active_ver}", f"Dataset is cleaned at {active_ver}! Ready for modeling! 🎉"),
+            ("review", f"Tom Lizard · Version {active_ver}", "Audit trail is clean! Check out Chart Studio or ML Readiness! 🧐"),
+            ("waving", f"Tom Lizard · Version {active_ver}", f"Cleaned data active ({active_ver}). Ask me anything below! 🦎"),
+        ]
+        return cleaned_states[cycle_index % len(cleaned_states)]
 
-    # 6. Default idle with data loaded
-    return (
-        "idle",
-        "Tom Lizard · Standing By",
-        f"Loaded '{getattr(wf_state, 'dataset_filename', 'Dataset')}'. Click 'Run Autonomous Pipeline' to start!",
-    )
+    # 6. Default idle with data loaded - Dynamic rotation
+    fname = getattr(wf_state, "dataset_filename", "Dataset")
+    idle_states = [
+        ("idle", "Tom Lizard · Standing By", f"Loaded '{fname}'. Click 'Run Autonomous Pipeline' to start!"),
+        ("review", "Tom Lizard · Inspecting", f"Examining {fname} distributions and schema... Looking good! 🧐"),
+        ("jumping", "Tom Lizard · Excited", f"{fname} is ready! Ask me for outlier or ML tips below! 🌟"),
+        ("waiting", "Tom Lizard · Observant", f"{fname} is ready. Standing by for your instructions! 📊"),
+        ("running-left", "Tom Lizard · Exploring", "Zooming through your features! Check out Chart Studio too! ⚡"),
+    ]
+    return idle_states[cycle_index % len(idle_states)]
 
 
-def get_ai_decision_advice(query_type: str, wf_state: Any) -> str:
-    """Provide intelligent decision recommendations for common user questions."""
+def get_ai_decision_advice(query: str, wf_state: Any) -> str:
+    """Provide intelligent decision recommendations using live Gemini API with rich dataset context."""
     if wf_state is None:
-        return "Please upload a dataset first so I can analyze it for you!"
+        return "🦎 **Tom's Advice:** Please upload or import a dataset first so I can analyze it with the Gemini API!"
 
     df = getattr(wf_state, "active_dataset", None)
     if df is None:
         df = getattr(wf_state, "original_dataset", None)
 
+    fname = getattr(wf_state, "dataset_filename", "Dataset")
     q = getattr(wf_state, "quality_result", None)
+    ml = getattr(wf_state, "ml_readiness_result", None)
+    approvals = getattr(wf_state, "approvals", [])
+    pending = [a for a in approvals if getattr(a, "status", "") == "pending"]
 
-    if query_type == "outliers":
-        if q and getattr(q, "outlier_columns", None):
-            outlier_names = list(q.outlier_columns.keys())
+    # Gather dataset metadata
+    n_rows = len(df) if df is not None else 0
+    n_cols = len(df.columns) if df is not None else 0
+    q_score = getattr(q, "overall_score", 80.0) if q else 80.0
+    missing_cells = getattr(q, "missing_cell_count", 0) if q else 0
+    outlier_dict = getattr(q, "outlier_columns", {}) if q else {}
+    outlier_cols = list(outlier_dict.keys()) if isinstance(outlier_dict, dict) else []
+    col_names = list(df.columns[:20]) if df is not None else []
+    inferred_task = getattr(ml, "inferred_task", "classification") if ml else "classification"
+    pending_descs = [
+        f"{getattr(a, 'action_type', 'action')} on {getattr(a, 'target_columns', [])} (Risk: {getattr(a, 'risk_level', 'unknown')})"
+        for a in pending[:4]
+    ]
+
+    # Map preset query tags to natural questions
+    query_map = {
+        "outliers": "How should I handle the outliers in this dataset? Which columns need capping or trimming and what ML models would care?",
+        "missing": "What is the best strategy for the missing values in this dataset? Should I impute or drop?",
+        "ml": "What ML task and models are best suited for this dataset, and what data prep steps should I take?",
+        "next": "What is the recommended next step for cleaning and analyzing this dataset?",
+    }
+    actual_question = query_map.get(query.lower(), query)
+
+    # 1. Attempt Live Gemini API
+    settings = load_settings()
+    if settings.gemini_api_key:
+        try:
+            client = GeminiClient(api_key=settings.gemini_api_key, model=settings.gemini_model)
+            prompt = f"""You are Tom Lizard 🦎, an expert data scientist and friendly AI pet companion in IntelliData Studio.
+You give concise, actionable, razor-sharp advice to help the user make safe, governed data decisions.
+
+Dataset Context:
+- Filename: {fname}
+- Dimensions: {n_rows:,} rows, {n_cols} columns
+- Sample Columns: {', '.join(col_names[:15])}
+- Data Quality Score: {q_score:.1f}/100
+- Missing cells: {missing_cells:,}
+- Columns with Outliers: {', '.join(outlier_cols[:5]) if outlier_cols else 'None detected'}
+- Inferred ML Task: {inferred_task}
+- Pending Human Approvals: {'; '.join(pending_descs) if pending_descs else 'None'}
+
+User Question:
+"{actual_question}"
+
+Instructions:
+1. Provide a direct, friendly answer in 2-3 short, high-value bullet points.
+2. Ground your advice directly in the dataset's actual features and statistics above.
+3. Keep the tone warm, smart, and enthusiastic with 1-2 lizard emojis 🦎.
+4. If decisions carry data-loss risk, remind the user about human-in-the-loop review.
+"""
+            res = client.generate(prompt, max_retries=2)
+            if res.success and res.text:
+                return f"🦎 **Tom's Advice (Gemini AI):**\n\n{res.text}"
+        except Exception:
+            pass  # Fall back to heuristic rule
+
+    # 2. Heuristic fallback when offline / no API key
+    if query == "outliers":
+        if outlier_cols:
             return (
                 f"🦎 **Tom's Advice on Outliers:**\n\n"
-                f"We detected outliers in **{', '.join(outlier_names[:3])}**.\n\n"
+                f"We detected outliers in **{', '.join(outlier_cols[:3])}**.\n\n"
                 "- **If building tree models (Random Forest, XGBoost):** You usually do **NOT** need to cap them; tree models handle non-linear extremes well.\n"
                 "- **If building linear models / regression:** High-leverage outliers can skew your coefficients. Cap with IQR or apply log-transformation.\n"
                 "- **Remember:** Always inspect whether outliers are valid real-world records!"
             )
         return "🦎 **Tom's Advice:** No severe IQR outliers detected in continuous numeric features. You're safe to proceed!"
 
-    elif query_type == "missing":
-        if q and getattr(q, "missing_cell_count", 0) > 0:
+    elif query == "missing":
+        if missing_cells > 0:
             return (
                 f"🦎 **Tom's Advice on Missing Data:**\n\n"
-                f"Found **{q.missing_cell_count:,} missing cell(s)**.\n\n"
+                f"Found **{missing_cells:,} missing cell(s)** in {fname}.\n\n"
                 "- **For low missingness (< 5%):** Median imputation for numeric, mode for categorical is safe and conservative.\n"
                 "- **For high missingness (> 60%):** Imputing mode can severely bias your data. Consider dropping the column or creating an indicator column (`is_missing`).\n"
                 "- **Never impute:** Unique identifiers or primary keys!"
             )
         return "🦎 **Tom's Advice:** Completeness is 100%! No missing values need imputation."
 
-    elif query_type == "ml":
-        ml = getattr(wf_state, "ml_readiness_result", None)
-        task = getattr(ml, "inferred_task", "classification") if ml else "classification"
+    elif query == "ml":
         return (
             f"🦎 **Tom's Advice on ML Modeling:**\n\n"
-            f"- **Inferred Task:** {task.title()}.\n"
+            f"- **Inferred Task:** {inferred_task.title()}.\n"
             "- **Baseline Suggestion:** Start with a simple interpretable model (Logistic Regression or Decision Tree), then benchmark against Random Forest or Gradient Boosting.\n"
             "- **Leakage Warning:** Always ensure target identifiers or post-event features are excluded before training!"
         )
 
-    # General / Custom
-    settings = load_settings()
-    if settings.gemini_api_key:
-        from tools.registry import registry
-        summary = registry.execute("generate_ai_summary", state=wf_state, api_key=settings.gemini_api_key)
-        return f"🦎 **Tom's AI Summary:**\n\n{summary}"
+    # Generic fallback
     return (
-        "🦎 **Tom's Advice:** Explore your correlations in Chart Studio, review pending proposals carefully, "
-        "and remember you can always roll back any change!"
+        f"🦎 **Tom's Advice:** For '{fname}', examine feature distributions in Chart Studio, "
+        "verify any high-risk proposals in the Governance Hub, and remember all versions are safely immutable!"
     )
 
 
@@ -275,14 +367,23 @@ def render_pet_assistant() -> None:
 
     wf_state = st.session_state.get("workflow_state")
 
-    # Allow user to pick a manual animation or keep automatic
-    auto_anim, badge, message = determine_pet_state(wf_state)
+    # Dynamic ambient cycling counter
+    if "tom_cycle_count" not in st.session_state:
+        st.session_state["tom_cycle_count"] = 0
 
-    # Check for manual user override in session_state
+    cycle_index = st.session_state["tom_cycle_count"]
+    auto_anim, badge, message = determine_pet_state(wf_state, cycle_index=cycle_index)
+
+    # Active animation resolution
     active_anim = st.session_state.get("tom_manual_anim", auto_anim)
     # If state changes to approval or running, reset override to reflect urgency
     if auto_anim in ("waiting", "review", "running", "failed"):
         active_anim = auto_anim
+
+    # Dynamic speech override if Tom recently answered a question
+    if "tom_speech_override" in st.session_state:
+        message = st.session_state["tom_speech_override"]
+        badge = "Tom Lizard · AI Answering"
 
     # Render CSS + Avatar + Speech bubble
     css = get_pet_css(b64_img)
@@ -303,31 +404,90 @@ def render_pet_assistant() -> None:
 
     # Interactive decision assistant drawer
     with st.expander("💬 Ask Tom (AI Decision Helper)", expanded=False):
-        c1, c2, c3 = st.columns(3)
-        if c1.button("Outliers?", key="tom_q_outliers", help="Advice on capping outliers"):
-            st.session_state["tom_advice"] = get_ai_decision_advice("outliers", wf_state)
+        st.caption("Ask Tom about data quality, feature prep, or ML trade-offs:")
+
+        # Quick preset buttons
+        c1, c2 = st.columns(2)
+        if c1.button("⚡ Outliers?", key="tom_q_outliers", help="Ask Gemini advice on capping outliers"):
+            with st.spinner("Tom is analyzing with Gemini..."):
+                st.session_state["tom_advice"] = get_ai_decision_advice("outliers", wf_state)
             st.session_state["tom_manual_anim"] = "review"
+            st.session_state["tom_speech_override"] = "I analyzed your outliers with Gemini! Check below 🦎"
             st.rerun()
 
-        if c2.button("Missing?", key="tom_q_missing", help="Advice on missing values"):
-            st.session_state["tom_advice"] = get_ai_decision_advice("missing", wf_state)
+        if c2.button("❓ Missing Data?", key="tom_q_missing", help="Ask Gemini advice on missing values"):
+            with st.spinner("Tom is analyzing with Gemini..."):
+                st.session_state["tom_advice"] = get_ai_decision_advice("missing", wf_state)
             st.session_state["tom_manual_anim"] = "waiting"
+            st.session_state["tom_speech_override"] = "Here is my advice on handling missing data! 🦎"
             st.rerun()
 
-        if c3.button("ML Tips?", key="tom_q_ml", help="Advice on machine learning"):
-            st.session_state["tom_advice"] = get_ai_decision_advice("ml", wf_state)
+        c3, c4 = st.columns(2)
+        if c3.button("🤖 ML Strategy?", key="tom_q_ml", help="Ask Gemini advice on machine learning"):
+            with st.spinner("Tom is analyzing with Gemini..."):
+                st.session_state["tom_advice"] = get_ai_decision_advice("ml", wf_state)
             st.session_state["tom_manual_anim"] = "jumping"
+            st.session_state["tom_speech_override"] = "Recommended ML modeling strategy ready! 🌟"
             st.rerun()
+
+        if c4.button("💡 Next Steps?", key="tom_q_next", help="Ask Gemini advice on next steps"):
+            with st.spinner("Tom is analyzing with Gemini..."):
+                st.session_state["tom_advice"] = get_ai_decision_advice("next", wf_state)
+            st.session_state["tom_manual_anim"] = "running-right"
+            st.session_state["tom_speech_override"] = "Got your next pipeline roadmap ready! 🚀"
+            st.rerun()
+
+        # Free-form custom question input
+        st.markdown("---")
+        custom_q = st.text_input(
+            "Ask Tom a custom question:",
+            placeholder="e.g. Should I normalize Age and Fare?",
+            key="tom_custom_q_input",
+        )
+        if st.button("Ask Gemini 🚀", key="tom_ask_custom_btn"):
+            if custom_q.strip():
+                with st.spinner("Tom is consulting Gemini..."):
+                    st.session_state["tom_advice"] = get_ai_decision_advice(custom_q.strip(), wf_state)
+                st.session_state["tom_manual_anim"] = "jumping"
+                st.session_state["tom_speech_override"] = f"Here is my Gemini insight on '{custom_q[:30]}...' 🦎"
+                st.rerun()
 
         # Display advice if available
         if "tom_advice" in st.session_state:
             st.info(st.session_state["tom_advice"])
             if st.button("Clear advice", key="tom_clear_advice"):
                 st.session_state.pop("tom_advice", None)
+                st.session_state.pop("tom_speech_override", None)
                 st.session_state.pop("tom_manual_anim", None)
                 st.rerun()
 
-        # Mood / Animation switcher
+        # Interactive Pet Tricks & Mood controls
+        st.markdown("---")
+        st.caption("Tom's Tricks & Animations:")
+        t1, t2, t3, t4, t5 = st.columns(5)
+        if t1.button("👋", key="tom_trick_wave", help="Make Tom wave"):
+            st.session_state["tom_manual_anim"] = "waving"
+            st.session_state["tom_speech_override"] = "Hi friend! Having fun analyzing data? 👋"
+            st.rerun()
+        if t2.button("🦘", key="tom_trick_jump", help="Make Tom jump"):
+            st.session_state["tom_manual_anim"] = "jumping"
+            st.session_state["tom_speech_override"] = "Woohoo! High energy data science! 🚀"
+            st.rerun()
+        if t3.button("🏃", key="tom_trick_run", help="Make Tom run"):
+            st.session_state["tom_manual_anim"] = "running"
+            st.session_state["tom_speech_override"] = "Speeding through rows and columns! ⚡"
+            st.rerun()
+        if t4.button("🧐", key="tom_trick_review", help="Make Tom inspect"):
+            st.session_state["tom_manual_anim"] = "review"
+            st.session_state["tom_speech_override"] = "Scrutinizing distributions closely... 🔍"
+            st.rerun()
+        if t5.button("🎲", key="tom_trick_random", help="Surprise trick"):
+            all_anims = list(ANIMATIONS.keys())
+            st.session_state["tom_manual_anim"] = random.choice(all_anims)
+            st.session_state["tom_cycle_count"] = st.session_state.get("tom_cycle_count", 0) + 1
+            st.rerun()
+
+        # Mood / Animation switcher selectbox
         selected_anim = st.selectbox(
             "Tom's Animation",
             list(ANIMATIONS.keys()),

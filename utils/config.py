@@ -70,7 +70,7 @@ def load_settings() -> Settings:
     """
     settings = Settings(
         gemini_api_key=os.getenv("GEMINI_API_KEY", ""),
-        gemini_model=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"),
+        gemini_model=os.getenv("GEMINI_MODEL", "gemini-3.1-flash-lite"),
         app_env=os.getenv("APP_ENV", "development"),
         log_level=os.getenv("LOG_LEVEL", "INFO"),
         max_upload_mb=max(1, min(50, _get_int("MAX_UPLOAD_MB", 50))),

@@ -49,6 +49,20 @@ class GeminiClient:
 
             except APIError as exc:
                 last_error = "The AI service is temporarily unavailable."
+                if getattr(exc, "code", None) == 429 and self.model != "gemini-3.1-flash-lite":
+                    try:
+                        fb_resp = self._client.models.generate_content(
+                            model="gemini-3.1-flash-lite",
+                            contents=prompt,
+                            config=types.GenerateContentConfig(
+                                temperature=0.2, max_output_tokens=2500
+                            ),
+                        )
+                        fb_text = (fb_resp.text or "").strip()
+                        if fb_text:
+                            return AIResponse(success=True, text=fb_text, attempts=attempt)
+                    except Exception:
+                        pass
                 if getattr(exc, "code", None) in (400, 401, 403, 404):
                     return AIResponse(
                         success=False,
