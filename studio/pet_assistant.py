@@ -7,7 +7,6 @@ from __future__ import annotations
 import base64
 from functools import lru_cache
 import os
-import random
 from typing import Any
 import streamlit as st
 
@@ -457,41 +456,3 @@ def render_pet_assistant() -> None:
                 st.session_state.pop("tom_speech_override", None)
                 st.session_state.pop("tom_manual_anim", None)
                 st.rerun()
-
-        # Interactive Pet Tricks & Mood controls
-        st.markdown("---")
-        st.caption("Tom's Actions & Animations:")
-        t1, t2, t3, t4, t5 = st.columns(5)
-        if t1.button("Wave", key="tom_trick_wave", help="Make Tom wave"):
-            st.session_state["tom_manual_anim"] = "waving"
-            st.session_state["tom_speech_override"] = "Hello! Ready to analyze data?"
-            st.rerun()
-        if t2.button("Jump", key="tom_trick_jump", help="Make Tom jump"):
-            st.session_state["tom_manual_anim"] = "jumping"
-            st.session_state["tom_speech_override"] = "Focusing on modeling and metrics."
-            st.rerun()
-        if t3.button("Run", key="tom_trick_run", help="Make Tom run"):
-            st.session_state["tom_manual_anim"] = "running"
-            st.session_state["tom_speech_override"] = "Processing data pipeline."
-            st.rerun()
-        if t4.button("Inspect", key="tom_trick_review", help="Make Tom inspect"):
-            st.session_state["tom_manual_anim"] = "review"
-            st.session_state["tom_speech_override"] = "Inspecting feature distributions."
-            st.rerun()
-        if t5.button("Shuffle", key="tom_trick_random", help="Surprise animation"):
-            all_anims = list(ANIMATIONS.keys())
-            st.session_state["tom_manual_anim"] = random.choice(all_anims)
-            st.session_state["tom_cycle_count"] = st.session_state.get("tom_cycle_count", 0) + 1
-            st.rerun()
-
-        # Mood / Animation switcher selectbox
-        selected_anim = st.selectbox(
-            "Tom's Animation",
-            list(ANIMATIONS.keys()),
-            index=list(ANIMATIONS.keys()).index(active_anim) if active_anim in ANIMATIONS else 0,
-            key="tom_select_anim_box",
-            label_visibility="collapsed",
-        )
-        if selected_anim != active_anim:
-            st.session_state["tom_manual_anim"] = selected_anim
-            st.rerun()
