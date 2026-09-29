@@ -11,8 +11,7 @@ import random
 from typing import Any
 import streamlit as st
 
-from modules.ai.client import GroqRotationClient, get_ai_client
-from utils.config import load_settings
+from modules.ai.client import get_ai_client
 
 
 SPRITESHEET_PATH = os.path.join(
@@ -315,11 +314,7 @@ Instructions:
 """
             res = ai_client.generate(prompt, max_retries=3)
             if res.success and res.text:
-                if isinstance(ai_client, GroqRotationClient):
-                    provider_tag = f"Groq AI · Key {ai_client.last_key_number}"
-                else:
-                    provider_tag = "Gemini AI"
-                return f"🦎 **Tom's Advice ({provider_tag}):**\n\n{res.text}"
+                return f"🦎 **Tom's Advice:**\n\n{res.text}"
         except Exception:
             pass  # Fall back to heuristic rule
 
@@ -407,45 +402,35 @@ def render_pet_assistant() -> None:
 
     # Interactive decision assistant drawer
     with st.expander("💬 Ask Tom (AI Decision Helper)", expanded=False):
-        settings = load_settings()
-        if settings.has_groq:
-            st.caption(f"⚡ Powered by Groq AI ({len(settings.groq_keys)} rotated keys)")
-        elif settings.gemini_api_key:
-            st.caption("⚡ Powered by Gemini AI")
-        else:
-            st.caption("Offline mode · Rule-based decision assistant")
-
-        provider_name = "Groq" if settings.has_groq else "AI"
-
         # Quick preset buttons
         c1, c2 = st.columns(2)
-        if c1.button("⚡ Outliers?", key="tom_q_outliers", help=f"Ask {provider_name} advice on capping outliers"):
-            with st.spinner(f"Tom is analyzing with {provider_name}..."):
+        if c1.button("⚡ Outliers?", key="tom_q_outliers", help="Ask Tom advice on capping outliers"):
+            with st.spinner("Tom is thinking..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("outliers", wf_state)
             st.session_state["tom_manual_anim"] = "review"
-            st.session_state["tom_speech_override"] = f"Analyzed your outliers with {provider_name}! Check below 🦎"
+            st.session_state["tom_speech_override"] = "Analyzed your outliers! Check below 🦎"
             st.rerun()
 
-        if c2.button("❓ Missing Data?", key="tom_q_missing", help=f"Ask {provider_name} advice on missing values"):
-            with st.spinner(f"Tom is analyzing with {provider_name}..."):
+        if c2.button("❓ Missing Data?", key="tom_q_missing", help="Ask Tom advice on missing values"):
+            with st.spinner("Tom is thinking..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("missing", wf_state)
             st.session_state["tom_manual_anim"] = "waiting"
-            st.session_state["tom_speech_override"] = f"Here is my {provider_name} advice on handling missing data! 🦎"
+            st.session_state["tom_speech_override"] = "Here is my advice on handling missing data! 🦎"
             st.rerun()
 
         c3, c4 = st.columns(2)
-        if c3.button("🤖 ML Strategy?", key="tom_q_ml", help=f"Ask {provider_name} advice on machine learning"):
-            with st.spinner(f"Tom is analyzing with {provider_name}..."):
+        if c3.button("🤖 ML Strategy?", key="tom_q_ml", help="Ask Tom advice on machine learning"):
+            with st.spinner("Tom is thinking..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("ml", wf_state)
             st.session_state["tom_manual_anim"] = "jumping"
-            st.session_state["tom_speech_override"] = f"Recommended ML strategy from {provider_name} ready! 🌟"
+            st.session_state["tom_speech_override"] = "Recommended ML strategy ready! 🌟"
             st.rerun()
 
-        if c4.button("💡 Next Steps?", key="tom_q_next", help=f"Ask {provider_name} advice on next steps"):
-            with st.spinner(f"Tom is analyzing with {provider_name}..."):
+        if c4.button("💡 Next Steps?", key="tom_q_next", help="Ask Tom advice on next steps"):
+            with st.spinner("Tom is thinking..."):
                 st.session_state["tom_advice"] = get_ai_decision_advice("next", wf_state)
             st.session_state["tom_manual_anim"] = "running-right"
-            st.session_state["tom_speech_override"] = f"Got your next pipeline roadmap from {provider_name}! 🚀"
+            st.session_state["tom_speech_override"] = "Got your next pipeline roadmap ready! 🚀"
             st.rerun()
 
         # Free-form custom question input
@@ -455,12 +440,12 @@ def render_pet_assistant() -> None:
             placeholder="e.g. Should I normalize Age and Fare?",
             key="tom_custom_q_input",
         )
-        if st.button(f"Ask {provider_name} 🚀", key="tom_ask_custom_btn"):
+        if st.button("Ask Tom 🚀", key="tom_ask_custom_btn"):
             if custom_q.strip():
-                with st.spinner(f"Tom is consulting {provider_name}..."):
+                with st.spinner("Tom is thinking..."):
                     st.session_state["tom_advice"] = get_ai_decision_advice(custom_q.strip(), wf_state)
                 st.session_state["tom_manual_anim"] = "jumping"
-                st.session_state["tom_speech_override"] = f"Here is my {provider_name} insight on '{custom_q[:30]}...' 🦎"
+                st.session_state["tom_speech_override"] = f"Here is my advice on '{custom_q[:30]}...' 🦎"
                 st.rerun()
 
         # Display advice if available
