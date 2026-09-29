@@ -54,67 +54,65 @@ def get_spritesheet_base64() -> str:
 def get_pet_css(b64_img: str) -> str:
     """Generate CSS keyframe animations for all 9 sprite sheet rows."""
     css_rules = [
-        f"""
-        <style>
-        .tom-pet-container {{
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            background: linear-gradient(135deg, rgba(20, 29, 48, 0.75), rgba(11, 16, 32, 0.9));
-            border: 1px solid rgba(102, 224, 194, 0.25);
-            border-radius: 12px;
-            padding: 8px 10px;
-            margin: 8px 0 14px 0;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
-            position: relative;
-        }}
-        .tom-pet-avatar {{
-            width: {DISPLAY_W}px;
-            height: {DISPLAY_H}px;
-            flex-shrink: 0;
-            background-image: url('data:image/webp;base64,{b64_img}');
-            background-size: {SHEET_W}px {SHEET_H}px;
-            background-repeat: no-repeat;
-            image-rendering: -webkit-optimize-contrast;
-            image-rendering: crisp-edges;
-            image-rendering: pixelated;
-            cursor: pointer;
-            transition: transform 0.2s ease;
-        }}
-        .tom-pet-avatar:hover {{
-            transform: scale(1.08);
-        }}
-        .tom-pet-speech {{
-            font-size: 11px;
-            line-height: 1.35;
-            color: #E8EDF7;
-            background: rgba(14, 22, 38, 0.85);
-            border: 1px solid rgba(102, 224, 194, 0.35);
-            border-radius: 8px;
-            padding: 6px 9px;
-            position: relative;
-            flex-grow: 1;
-        }}
-        .tom-pet-speech::before {{
-            content: '';
-            position: absolute;
-            left: -6px;
-            top: 50%;
-            transform: translateY(-50%);
-            border-top: 5px solid transparent;
-            border-bottom: 5px solid transparent;
-            border-right: 6px solid rgba(102, 224, 194, 0.35);
-        }}
-        .tom-pet-badge {{
-            display: inline-block;
-            font-size: 9px;
-            font-weight: 700;
-            color: #66E0C2;
-            text-transform: uppercase;
-            letter-spacing: 0.5px;
-            margin-bottom: 2px;
-        }}
-        """
+        "<style>",
+        ".tom-pet-container {",
+        "    display: flex;",
+        "    align-items: center;",
+        "    gap: 10px;",
+        "    background: linear-gradient(135deg, rgba(20, 29, 48, 0.75), rgba(11, 16, 32, 0.9));",
+        "    border: 1px solid rgba(102, 224, 194, 0.25);",
+        "    border-radius: 12px;",
+        "    padding: 8px 10px;",
+        "    margin: 8px 0 14px 0;",
+        "    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);",
+        "    position: relative;",
+        "}",
+        ".tom-pet-avatar {",
+        f"    width: {DISPLAY_W}px;",
+        f"    height: {DISPLAY_H}px;",
+        "    flex-shrink: 0;",
+        f"    background-image: url('data:image/webp;base64,{b64_img}');",
+        f"    background-size: {SHEET_W}px {SHEET_H}px;",
+        "    background-repeat: no-repeat;",
+        "    image-rendering: -webkit-optimize-contrast;",
+        "    image-rendering: crisp-edges;",
+        "    image-rendering: pixelated;",
+        "    cursor: pointer;",
+        "    transition: transform 0.2s ease;",
+        "}",
+        ".tom-pet-avatar:hover {",
+        "    transform: scale(1.08);",
+        "}",
+        ".tom-pet-speech {",
+        "    font-size: 11px;",
+        "    line-height: 1.35;",
+        "    color: #E8EDF7;",
+        "    background: rgba(14, 22, 38, 0.85);",
+        "    border: 1px solid rgba(102, 224, 194, 0.35);",
+        "    border-radius: 8px;",
+        "    padding: 6px 9px;",
+        "    position: relative;",
+        "    flex-grow: 1;",
+        "}",
+        ".tom-pet-speech::before {",
+        "    content: '';",
+        "    position: absolute;",
+        "    left: -6px;",
+        "    top: 50%;",
+        "    transform: translateY(-50%);",
+        "    border-top: 5px solid transparent;",
+        "    border-bottom: 5px solid transparent;",
+        "    border-right: 6px solid rgba(102, 224, 194, 0.35);",
+        "}",
+        ".tom-pet-badge {",
+        "    display: inline-block;",
+        "    font-size: 9px;",
+        "    font-weight: 700;",
+        "    color: #66E0C2;",
+        "    text-transform: uppercase;",
+        "    letter-spacing: 0.5px;",
+        "    margin-bottom: 2px;",
+        "}",
     ]
 
     for name, config in ANIMATIONS.items():
@@ -126,16 +124,14 @@ def get_pet_css(b64_img: str) -> str:
         total_x = -frames * DISPLAY_W
 
         css_rules.append(
-            f"""
-            @keyframes play-tom-{name} {{
-                from {{ background-position: 0px {y_offset}px; }}
-                to {{ background-position: {total_x}px {y_offset}px; }}
-            }}
-            .tom-anim-{name} {{
-                background-position: 0px {y_offset}px;
-                animation: play-tom-{name} {duration} steps({frames}) {loop};
-            }}
-            """
+            f"@keyframes play-tom-{name} {{\n"
+            f"    from {{ background-position: 0px {y_offset}px; }}\n"
+            f"    to {{ background-position: {total_x}px {y_offset}px; }}\n"
+            f"}}\n"
+            f".tom-anim-{name} {{\n"
+            f"    background-position: 0px {y_offset}px;\n"
+            f"    animation: play-tom-{name} {duration} steps({frames}) {loop};\n"
+            f"}}"
         )
 
     css_rules.append("</style>")
@@ -290,17 +286,20 @@ def render_pet_assistant() -> None:
 
     # Render CSS + Avatar + Speech bubble
     css = get_pet_css(b64_img)
-    html = f"""
-    {css}
-    <div class="tom-pet-container" title="Click 'Ask Tom' below for AI decision advice!">
-        <div class="tom-pet-avatar tom-anim-{active_anim}"></div>
-        <div class="tom-pet-speech">
-            <span class="tom-pet-badge">{badge}</span><br>
-            {message}
-        </div>
-    </div>
-    """
-    st.markdown(html, unsafe_allow_html=True)
+    markup = (
+        f"{css}\n"
+        f'<div class="tom-pet-container" title="Click \'Ask Tom\' below for AI decision advice!">'
+        f'<div class="tom-pet-avatar tom-anim-{active_anim}"></div>'
+        f'<div class="tom-pet-speech">'
+        f'<span class="tom-pet-badge">{badge}</span><br>'
+        f"{message}"
+        f'</div>'
+        f'</div>'
+    )
+    if hasattr(st, "html"):
+        st.html(markup)
+    else:
+        st.markdown(markup, unsafe_allow_html=True)
 
     # Interactive decision assistant drawer
     with st.expander("💬 Ask Tom (AI Decision Helper)", expanded=False):
