@@ -6,7 +6,7 @@ from modules.eda import EDAResult
 from modules.quality import QualityScore
 
 _INSTRUCTION = (
-    "Below are statistical findings from a cleaned dataset: correlations "
+    "Below are statistical findings from the active dataset: correlations "
     "between numeric columns, column distributions, and categorical "
     "breakdowns. Identify 3-5 business-relevant insights a stakeholder "
     "would care about — for example: notable relationships between "
@@ -35,8 +35,10 @@ def _gather_context(quality: QualityScore, eda: EDAResult) -> str:
         lines.append("Numeric column shapes:")
         for stat in eda.numeric_stats:
             skew_note = (
-                "right-skewed (long tail of high values)" if stat.skewness > 1
-                else "left-skewed (long tail of low values)" if stat.skewness < -1
+                "right-skewed (long tail of high values)"
+                if stat.skewness > 1
+                else "left-skewed (long tail of low values)"
+                if stat.skewness < -1
                 else "roughly symmetric"
             )
             lines.append(f"  - {stat.name}: {skew_note} (skewness={stat.skewness})")
@@ -60,6 +62,7 @@ def _gather_context(quality: QualityScore, eda: EDAResult) -> str:
 def build_business_insights_prompt(quality: QualityScore, eda: EDAResult) -> str:
     context = _gather_context(quality, eda)
     return build_prompt(_INSTRUCTION, truncate_for_prompt(context))
+
 
 def _fallback_insights(quality: QualityScore, eda: EDAResult) -> str:
     """Algorithmically assembled insights used if the AI call fails.
@@ -89,7 +92,8 @@ def _fallback_insights(quality: QualityScore, eda: EDAResult) -> str:
 
     if quality.outlier_columns:
         outlier_summary = ", ".join(
-            f"{col} ({count})" for col, count in list(quality.outlier_columns.items())[:3]
+            f"{col} ({count})"
+            for col, count in list(quality.outlier_columns.items())[:3]
         )
         bullets.append(f"- Outliers were found in: {outlier_summary}.")
 
@@ -99,7 +103,9 @@ def _fallback_insights(quality: QualityScore, eda: EDAResult) -> str:
     return "\n".join(bullets)
 
 
-def generate_business_insights(client: GeminiClient, quality: QualityScore, eda: EDAResult) -> str:
+def generate_business_insights(
+    client: GeminiClient, quality: QualityScore, eda: EDAResult
+) -> str:
     prompt = build_business_insights_prompt(quality, eda)
     response = client.generate(prompt)
 

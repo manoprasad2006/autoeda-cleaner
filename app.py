@@ -1,62 +1,94 @@
 import streamlit as st
-
+from studio.common import style
 from utils.config import load_settings
-from utils.logger import get_logger
+from utils.session import init_session_state, has_dataset, has_cleaned_dataset
 
-# st.set_page_config must be the first Streamlit command executed,
-# before any other st.* call — Streamlit enforces this and raises an
-# error otherwise.
 st.set_page_config(
-    page_title="IntelliData AI",
-    page_icon="📊",
+    page_title="IntelliData Studio",
+    page_icon="✦",
     layout="wide",
     initial_sidebar_state="expanded",
 )
+style()
+from utils.auth import enforce_auth
 
-
-@st.cache_resource
-def get_settings():
-    """
-    Load settings once per app process, not once per rerun.
-
-    st.cache_resource is Streamlit's mechanism for caching objects that
-    should be shared across all users and all reruns of the script
-    (as opposed to st.cache_data, which is for cacheable data values).
-    Settings are a perfect fit: they don't change while the app is
-    running, and reloading .env on every click would be wasteful.
-    """
-    return load_settings()
-
-
-def main() -> None:
-    settings = get_settings()
-    logger = get_logger("app", settings.logs_dir, settings.log_level)
-
-    logger.info("App started | env=%s", settings.app_env)
-
-    if not settings.gemini_api_key:
-        # Fail loudly in the UI (not just the log) — a missing API key
-        # is the single most common setup mistake, and every AI feature
-        # in later phases depends on it.
-        st.warning(
-            "GEMINI_API_KEY is not set. Copy `.env.example` to `.env` "
-            "and add your key before AI features will work.",
-            icon="⚠️",
+enforce_auth()
+init_session_state()
+settings = load_settings()
+with st.sidebar:
+    st.markdown("## ✦ IntelliData")
+    st.caption("D A T A   S T U D I O")
+    st.divider()
+    if has_dataset():
+        st.caption("ACTIVE WORKSPACE")
+        st.write(st.session_state.get("dataset_filename", "Dataset"))
+        st.caption(
+            "● Cleaned version" if has_cleaned_dataset() else "● Original version"
         )
-
-    st.title("IntelliData AI")
-    st.caption("An AI-Powered Data Intelligence Platform for Data Analytics & ML")
-
-    st.markdown(
-        """
-        Welcome — this is the project scaffold from **Phase 1**.
-
-        Nothing functional lives here yet. Upload, profiling, cleaning,
-        EDA, visualization, and the AI features arrive in the phases
-        that follow, each as its own page under `pages/`.
-        """
+        wf_state = st.session_state.get("workflow_state")
+        if wf_state:
+            pending_n = len([a for a in getattr(wf_state, "approvals", []) if getattr(a, "status", "") == "pending"])
+            if pending_n > 0:
+                st.warning(f"⚠️ {pending_n} decision(s) pending review")
+            else:
+                st.caption(f"Stage: {wf_state.current_stage}")
+    else:
+        st.caption("Your next insight starts here.")
+pages = {
+    "Workspace": [
+        st.Page(
+            "studio/overview_page.py",
+            title="Overview",
+            icon=":material/dashboard:",
+            default=True,
+        ),
+        st.Page(
+            "studio/agent_page.py",
+            title="Agent Governance Hub",
+            icon=":material/smart_toy:",
+        ),
+        st.Page(
+            "studio/import_page.py", title="Import data", icon=":material/upload_file:"
+        ),
+    ],
+    "Prepare": [
+        st.Page(
+            "studio/explorer_page.py",
+            title="Data explorer",
+            icon=":material/table_chart:",
+        ),
+        st.Page(
+            "studio/quality_page.py",
+            title="Quality & cleaning",
+            icon=":material/auto_fix_high:",
+        ),
+    ],
+    "Explore & share": [
+        st.Page(
+            "studio/charts_page.py", title="Chart studio", icon=":material/monitoring:"
+        ),
+        st.Page(
+            "studio/intelligence_page.py",
+            title="AI & ML readiness",
+            icon=":material/psychology:",
+        ),
+        st.Page(
+            "studio/report_page.py", title="Export center", icon=":material/ios_share:"
+        ),
+    ],
+}
+page = st.navigation(pages, position="hidden")
+with st.sidebar:
+    for section, items in pages.items():
+        st.caption(section.upper())
+        for item in items:
+            st.page_link(item)
+with st.sidebar:
+    st.divider()
+    st.caption("Import → Prepare → Explore → Share")
+    st.caption(
+        "AI available · opt-in per dataset"
+        if settings.gemini_api_key
+        else "Local analytics · AI key not configured"
     )
-
-
-if __name__ == "__main__":
-    main()
+page.run()

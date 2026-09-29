@@ -19,7 +19,8 @@ class QualityScore:
     inconsistent_columns: list[str] = field(default_factory=list)
     outlier_columns: dict[str, int] = field(default_factory=dict)
 
-#detecting mixed-type columns (for the consistency score)
+
+# detecting mixed-type columns (for the consistency score)
 def _is_mixed_type_column(series: pd.Series) -> bool:
     non_null = series.dropna()
     if non_null.empty:
@@ -28,13 +29,13 @@ def _is_mixed_type_column(series: pd.Series) -> bool:
     return types_seen > 1
 
 
-#detecting outliers with IQR (for the validity score)
+# detecting outliers with IQR (for the validity score)
 def iqr_bounds(series: pd.Series) -> tuple[float, float] | None:
     """Return (lower_bound, upper_bound) for outlier detection via the
     standard 1.5*IQR rule, or None if bounds can't be meaningfully computed
     (too few values, or zero variance)."""
-    non_null = series.dropna()
-    if len(non_null) < 4:
+    non_null = series.replace([float("inf"), -float("inf")], float("nan")).dropna()
+    if pd.api.types.is_bool_dtype(series) or len(non_null) < 4:
         return None
 
     q1 = non_null.quantile(0.25)
@@ -57,18 +58,17 @@ def count_outliers_iqr(series: pd.Series) -> int:
     non_null = series.dropna()
     return int(((non_null < lower_bound) | (non_null > upper_bound)).sum())
 
+
 def assess_quality(df: pd.DataFrame, profile: DatasetProfile) -> QualityScore:
     total_cells = profile.n_rows * profile.n_columns
     missing_cell_count = sum(c.missing_count for c in profile.columns)
     completeness_score = (
-        100 - (missing_cell_count / total_cells * 100) if total_cells else 100.0
+        100 - (missing_cell_count / total_cells * 100) if total_cells else 0.0
     )
 
     duplicate_score = 100 - profile.duplicate_pct
 
-    inconsistent_columns = [
-        col for col in df.columns if _is_mixed_type_column(df[col])
-    ]
+    inconsistent_columns = [col for col in df.columns if _is_mixed_type_column(df[col])]
     consistency_score = (
         100 - (len(inconsistent_columns) / profile.n_columns * 100)
         if profile.n_columns
@@ -95,7 +95,7 @@ def assess_quality(df: pd.DataFrame, profile: DatasetProfile) -> QualityScore:
         + consistency_score * 0.20
         + validity_score * 0.15
     )
-    overall_score = max(0.0, min(100.0, overall_score))
+    overall_score = max(0.0, min(100.0, overall_score)) if total_cells else 0.0
 
     return QualityScore(
         completeness_score=round(max(0.0, completeness_score), 2),

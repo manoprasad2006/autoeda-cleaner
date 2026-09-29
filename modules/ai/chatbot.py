@@ -32,14 +32,16 @@ def build_system_context(
     readiness: MLReadinessResult | None,
 ) -> str:
     cleaning_summary = (
-        ", ".join(sorted({a.issue for a in log.actions})) if log.actions
-        else "none needed"
+        ", ".join(sorted({a.issue for a in log.actions}))
+        if log.actions
+        else "none applied"
     )
     correlations = (
         "; ".join(
             f"{p.column_a}/{p.column_b} ({p.correlation})"
             for p in eda.correlation_pairs[:5]
-        ) if eda.correlation_pairs
+        )
+        if eda.correlation_pairs
         else "none found"
     )
 
@@ -89,7 +91,7 @@ class ChatSession:
         existing GeminiClient.generate(prompt) interface."""
         history = "\n".join(
             f"{'User' if m.role == 'user' else 'Assistant'}: {m.content}"
-            for m in self.messages
+            for m in self.messages[-12:]
         )
         return f"{self.system_context}\n\nConversation so far:\n{history}\n\nAssistant:"
 
@@ -99,6 +101,8 @@ def ask_chatbot(client: GeminiClient, session: ChatSession, question: str) -> st
     response to the session too, and return it. On AI failure, returns
     an honest error message rather than crashing the chat UI -- there's
     no meaningful structural fallback for open-ended Q&A."""
+    if len(question) > 2000:
+        return "Please keep your question under 2,000 characters."
     session.add_user_message(question)
     prompt = session.build_prompt()
     response = client.generate(prompt)

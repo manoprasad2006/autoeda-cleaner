@@ -6,7 +6,7 @@ from modules.eda import EDAResult
 from modules.profiler import DatasetProfile
 
 _INSTRUCTION = (
-    "Below are the columns and statistical findings for a cleaned "
+    "Below are the columns and statistical findings for the active "
     "dataset. Suggest 3-5 concrete feature engineering ideas that could "
     "improve analysis or machine learning on this specific data — for "
     "example: binning a numeric column into groups, a ratio between two "
@@ -56,7 +56,8 @@ def _fallback_suggestions(profile: DatasetProfile, eda: EDAResult) -> str:
     col_lookup = {c.name: c for c in profile.columns}
 
     binning_candidates = [
-        stat for stat in eda.numeric_stats
+        stat
+        for stat in eda.numeric_stats
         if col_lookup.get(stat.name) and col_lookup[stat.name].unique_count > 10
     ][:2]
     for stat in binning_candidates:

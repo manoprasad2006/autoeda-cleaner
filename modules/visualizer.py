@@ -5,7 +5,7 @@ import plotly.express as px
 import plotly.graph_objects as go
 
 
-#histogram plot
+# histogram plot
 def build_histogram(df: pd.DataFrame, column: str) -> go.Figure:
     fig = px.histogram(
         df,
@@ -22,8 +22,10 @@ def build_histogram(df: pd.DataFrame, column: str) -> go.Figure:
     return fig
 
 
-#scatter plot
-def build_scatter(df: pd.DataFrame, x_column: str, y_column: str, color_column: str | None = None) -> go.Figure:
+# scatter plot
+def build_scatter(
+    df: pd.DataFrame, x_column: str, y_column: str, color_column: str | None = None
+) -> go.Figure:
     fig = px.scatter(
         df,
         x=x_column,
@@ -31,14 +33,18 @@ def build_scatter(df: pd.DataFrame, x_column: str, y_column: str, color_column: 
         color=color_column,
         title=f"{y_column} vs {x_column}",
         opacity=0.6,
-        trendline="ols" if df[x_column].dtype.kind in "if" and df[y_column].dtype.kind in "if" else None,
+        trendline="ols"
+        if df[x_column].dtype.kind in "if" and df[y_column].dtype.kind in "if"
+        else None,
     )
     fig.update_layout(xaxis_title=x_column, yaxis_title=y_column)
     return fig
 
 
-#box plot
-def build_box_plot(df: pd.DataFrame, column: str, group_by: str | None = None) -> go.Figure:
+# box plot
+def build_box_plot(
+    df: pd.DataFrame, column: str, group_by: str | None = None
+) -> go.Figure:
     fig = px.box(
         df,
         y=column,
@@ -50,7 +56,7 @@ def build_box_plot(df: pd.DataFrame, column: str, group_by: str | None = None) -
     return fig
 
 
-#correlation heatmap
+# correlation heatmap
 def build_correlation_heatmap(correlation_matrix: pd.DataFrame) -> go.Figure:
     fig = px.imshow(
         correlation_matrix,

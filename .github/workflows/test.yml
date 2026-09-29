@@ -1,0 +1,19 @@
+name: Python checks
+on: [push, pull_request]
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    env:
+      APP_ENV: development
+      GEMINI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+          cache: pip
+      - run: pip install -r requirements-dev.txt
+      - run: python -m ruff check app.py studio modules utils tests
+      - run: python -m ruff format --check app.py studio modules utils tests
+      - run: python -m pytest -q
+      - run: pip check

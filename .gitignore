@@ -9,6 +9,9 @@ __pycache__/
 *.pyc
 *.pyo
 .pytest_cache/
+.ruff_cache/
+.coverage
+htmlcov/
 *.egg-info/
 
 # Streamlit
@@ -24,8 +27,10 @@ reports/*
 logs/*
 !logs/.gitkeep
 
-# OS / editor
+# OS / editor / tooling
 .DS_Store
 .vscode/
 .idea/
 .vs/
+.impeccable/
+.impeccable-critique-body.md

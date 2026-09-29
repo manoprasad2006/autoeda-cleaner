@@ -1,83 +1,154 @@
+import io
+import zipfile
 import numpy as np
 import pandas as pd
 import pytest
-
+from pandas.testing import assert_frame_equal
+from modules.cleaner import auto_clean, CleaningOptions
+from modules.loader import (
+    load_dataset,
+    validate_file,
+    FileTooLargeError,
+    UnsupportedFileTypeError,
+    EmptyDatasetError,
+)
 from modules.profiler import profile_dataset
 from modules.quality import assess_quality
-
-def _make_messy_dataset() -> pd.DataFrame:
-    np.random.seed(42)
-
-    n = 200
-    age = list(np.random.randint(20, 60, n))
-    income = list(np.random.uniform(30000, 90000, n))
-    signup_source = list(np.random.choice(["web", "mobile", "referral"], n))
-
-    age[0] = 9999      # outlier
-    age[1] = -500       # outlier
-    income[5] = "unknown"   # mixed type
-    income[10] = "N/A"      # mixed type
-
-    df = pd.DataFrame({"age": age, "income": income, "signup_source": signup_source})
-
-    df.loc[50:79, "age"] = np.nan          # 30 missing values, isolated range
-
-    df = pd.concat([df, df.iloc[100:140]], ignore_index=True)  # 40 duplicates, isolated range
-    return df
-
-def test_quality_detects_exact_duplicate_count():
-    df = _make_messy_dataset()
-    profile = profile_dataset(df)
-    quality = assess_quality(df, profile)
-    assert quality.duplicate_row_count == 40
+from modules.eda import run_eda
+from modules.ml_readiness import assess_ml_readiness
+from modules.exports import csv_bytes, report_html, export_bundle
 
 
-def test_quality_detects_mixed_type_column():
-    ...
-    assert quality.inconsistent_columns == ["income"]
-
-def test_quality_detects_outliers_with_correct_count():
-    ...
-    assert quality.outlier_columns.get("age") == 2
-
-def test_quality_scores_are_bounded_0_to_100():
-    ...
-    for score in (
-        quality.completeness_score,
-        quality.duplicate_score,
-        quality.consistency_score,
-        quality.validity_score,
-        quality.overall_score,
-    ):
-        assert 0.0 <= score <= 100.0
-
-def test_clean_dataset_scores_100():
+def test_quality_dimensions():
     df = pd.DataFrame(
         {
-            "age": np.random.randint(20, 60, 100),
-            "income": np.random.uniform(30000, 90000, 100),
+            "n": [1, 2, 3, 4, 5, 6, 7, 100, None],
+            "mixed": pd.Series(
+                ["a", 1, "b", "c", "d", "e", "f", "g", "h"], dtype=object
+            ),
         }
     )
-    profile = profile_dataset(df)
-    quality = assess_quality(df, profile)
-    assert quality.overall_score == 100.0
-    assert quality.inconsistent_columns == []
-    assert quality.outlier_columns == {}
+    df = pd.concat([df, df.iloc[[0]]], ignore_index=True)
+    score = assess_quality(df, profile_dataset(df))
+    assert score.duplicate_row_count == 1
+    assert score.missing_cell_count == 1
+    assert score.inconsistent_columns == ["mixed"]
+    assert score.outlier_columns["n"] == 1
+    assert 0 <= score.overall_score < 100
 
 
-def test_messy_dataset_scores_meaningfully_lower_than_clean():
-    messy_df = _make_messy_dataset()
-    messy_profile = profile_dataset(messy_df)
-    messy_quality = assess_quality(messy_df, messy_profile)
+def test_clean_quality_and_boolean_columns():
+    df = pd.DataFrame({"n": range(10), "flag": [True, False] * 5})
+    assert assess_quality(df, profile_dataset(df)).overall_score == 100
 
-    clean_df = pd.DataFrame({...})
-    clean_profile = profile_dataset(clean_df)
-    clean_quality = assess_quality(clean_df, clean_profile)
 
-    assert messy_quality.overall_score < clean_quality.overall_score
+def test_empty_numeric_and_nullable_columns():
+    df = pd.DataFrame(
+        {
+            "empty": [np.nan] * 4,
+            "number": pd.Series([1, None, 2, 3], dtype="Int64"),
+            "category": pd.Series(["x", None, "x", "y"], dtype="category"),
+        }
+    )
+    clean, log = auto_clean(df, CleaningOptions(categorical_fill=True))
+    assert clean["empty"].isna().all()
+    assert clean["number"].isna().sum() == 0
+    assert clean["category"].isna().sum() == 0
+    assert all(a.column != "empty" for a in log.actions)
 
-def test_quality_handles_empty_dataframe_without_crashing():
-    df = pd.DataFrame({"a": [], "b": []})
-    profile = profile_dataset(df)
-    quality = assess_quality(df, profile)
-    assert quality.overall_score == 100.0
+
+def test_cleaning_is_reversible_and_conservative():
+    df = pd.DataFrame(
+        {
+            "id": [1, 2, 3, 4],
+            "text": [" A ", "a", None, "b"],
+            "n": [1, 2, None, 999],
+            "sparse": [None, None, None, "x"],
+        }
+    )
+    original = df.copy(deep=True)
+    clean, log = auto_clean(df, CleaningOptions(protected_columns=("id",)))
+    assert_frame_equal(df, original)
+    assert clean["n"].iloc[-1] == 999
+    assert clean["text"].iloc[0] == "A"
+    assert clean["text"].isna().sum() == 1
+    assert clean["sparse"].isna().sum() == 3
+    assert [a.rows_affected for a in log.actions if a.issue == "whitespace"] == [1]
+
+
+def test_deduplication_happens_after_normalization():
+    df = pd.DataFrame({"x": [" A ", "A"]})
+    clean, log = auto_clean(df)
+    assert len(clean) == 1
+    assert log.actions[-1].issue == "duplicate rows"
+
+
+def test_protected_target_is_not_imputed():
+    df = pd.DataFrame({"target": [1, None, 0], "x": [1, 2, None]})
+    clean, _ = auto_clean(df, CleaningOptions(protected_columns=("target",)))
+    assert clean.target.isna().sum() == 1
+    assert clean.x.isna().sum() == 0
+
+
+def test_upload_contracts():
+    with pytest.raises(FileTooLargeError):
+        validate_file("x.csv", 51 * 1024 * 1024, 50)
+    with pytest.raises(UnsupportedFileTypeError):
+        load_dataset(io.BytesIO(b"x"), "x.exe")
+    with pytest.raises(EmptyDatasetError):
+        load_dataset(io.BytesIO(b"a,b\n"), "x.csv")
+    with pytest.raises(ValueError, match="Nested"):
+        load_dataset(io.BytesIO(b'[{"x":{"a":1}}]'), "x.json")
+    df = load_dataset(io.BytesIO(b"a,b\n1,2\n"), "x.csv")
+    assert df.shape == (1, 2)
+
+
+def test_missing_target_is_reported():
+    df = pd.DataFrame({"target": [1, None, 0, 1], "x": [1, 2, 3, 4]})
+    p = profile_dataset(df)
+    readiness = assess_ml_readiness(
+        df,
+        p,
+        assess_quality(df, p),
+        run_eda(df, p.numerical_columns, p.categorical_columns),
+        "target",
+    )
+    assert any(i.category == "Missing target labels" for i in readiness.issues)
+
+
+def test_export_escapes_html_and_spreadsheet_formulas():
+    df = pd.DataFrame({"<script>": ["=1+1", "normal"], "n": [-1, 2]})
+    assert "'=1+1" in csv_bytes(df).decode("utf-8-sig")
+    report = report_html(df, "<script>alert(1)</script>")
+    assert "<script>" not in report
+    assert "&lt;script&gt;" in report
+    with zipfile.ZipFile(io.BytesIO(export_bundle(df, "test"))) as archive:
+        assert {"dataset.csv", "report.html", "quality.json", "recipe.json"} <= set(
+            archive.namelist()
+        )
+
+
+def test_all_null_and_boolean_dataset_analysis():
+    df = pd.DataFrame({"empty": [np.nan] * 4, "flag": [True, False, True, False]})
+    p = profile_dataset(df)
+    eda = run_eda(df, p.numerical_columns, p.categorical_columns)
+    assert p.categorical_columns == ["flag"]
+    assert not eda.numeric_stats
+    assert eda.categorical_stats[0].unique_count == 2
+
+
+def test_opt_in_outlier_capping_preserves_protected_column():
+    df = pd.DataFrame(
+        {"x": list(range(20)) + [10000], "target": list(range(20)) + [10000]}
+    )
+    clean, log = auto_clean(
+        df, CleaningOptions(cap_outliers=True, protected_columns=("target",))
+    )
+    assert clean.x.max() < 10000
+    assert clean.target.max() == 10000
+    assert any(a.issue == "outliers" for a in log.actions)
+
+
+def test_empty_dataset_quality_is_not_perfect():
+    df = pd.DataFrame({"x": []})
+    assert assess_quality(df, profile_dataset(df)).overall_score == 0

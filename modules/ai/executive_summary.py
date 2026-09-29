@@ -83,9 +83,12 @@ def _fallback_summary(
 ) -> str:
     """Algorithmically assembled summary used if the AI call fails."""
     quality_word = (
-        "excellent" if quality.overall_score >= 90
-        else "good" if quality.overall_score >= 75
-        else "fair" if quality.overall_score >= 60
+        "excellent"
+        if quality.overall_score >= 90
+        else "good"
+        if quality.overall_score >= 75
+        else "fair"
+        if quality.overall_score >= 60
         else "poor"
     )
 
@@ -94,7 +97,7 @@ def _fallback_summary(
         f"{_plural(profile.n_rows, 'row')} and {profile.n_columns} "
         f"{_plural(profile.n_columns, 'column')}.",
         f"Overall data quality was {quality_word} "
-        f"({quality.overall_score}%) before cleaning.",
+        f"({quality.overall_score}%) for the active dataset.",
     ]
 
     if log.actions:

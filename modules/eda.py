@@ -5,7 +5,7 @@ from dataclasses import dataclass, field
 import pandas as pd
 
 
-#numerical column analysis
+# numerical column analysis
 @dataclass(frozen=True)
 class NumericColumnStats:
     name: str
@@ -19,10 +19,12 @@ class NumericColumnStats:
     skewness: float
 
 
-def analyze_numeric_columns(df: pd.DataFrame, numerical_columns: list[str]) -> list[NumericColumnStats]:
+def analyze_numeric_columns(
+    df: pd.DataFrame, numerical_columns: list[str]
+) -> list[NumericColumnStats]:
     stats = []
     for col in numerical_columns:
-        series = df[col].dropna()
+        series = df[col].replace([float("inf"), -float("inf")], float("nan")).dropna()
         if series.empty:
             continue
 
@@ -58,7 +60,9 @@ class EDAResult:
     correlation_matrix: pd.DataFrame
 
 
-def run_eda(df: pd.DataFrame, numerical_columns: list[str], categorical_columns: list[str]) -> EDAResult:
+def run_eda(
+    df: pd.DataFrame, numerical_columns: list[str], categorical_columns: list[str]
+) -> EDAResult:
     numeric_stats = analyze_numeric_columns(df, numerical_columns)
     categorical_stats = analyze_categorical_columns(df, categorical_columns)
 
@@ -72,9 +76,12 @@ def run_eda(df: pd.DataFrame, numerical_columns: list[str], categorical_columns:
             for j in range(i + 1, len(numerical_columns)):
                 col_a = numerical_columns[i]
                 col_b = numerical_columns[j]
-                
+
                 # Check if columns exist in the correlation matrix (in case corr() dropped them)
-                if col_a in correlation_matrix.columns and col_b in correlation_matrix.columns:
+                if (
+                    col_a in correlation_matrix.columns
+                    and col_b in correlation_matrix.columns
+                ):
                     corr_val = correlation_matrix.loc[col_a, col_b]
                     if pd.notna(corr_val) and abs(corr_val) >= 0.5:
                         strength = "Strong" if abs(corr_val) >= 0.7 else "Moderate"
@@ -83,19 +90,21 @@ def run_eda(df: pd.DataFrame, numerical_columns: list[str], categorical_columns:
                                 column_a=col_a,
                                 column_b=col_b,
                                 correlation=round(float(corr_val), 3),
-                                strength=strength
+                                strength=strength,
                             )
                         )
-                        
+
     return EDAResult(
         numeric_stats=numeric_stats,
         categorical_stats=categorical_stats,
-        correlation_pairs=correlation_pairs,
-        correlation_matrix=correlation_matrix
+        correlation_pairs=sorted(
+            correlation_pairs, key=lambda p: abs(p.correlation), reverse=True
+        ),
+        correlation_matrix=correlation_matrix,
     )
 
 
-#categorical column analysis
+# categorical column analysis
 @dataclass(frozen=True)
 class CategoricalColumnStats:
     name: str

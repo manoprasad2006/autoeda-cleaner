@@ -22,7 +22,9 @@ class MLReadinessResult:
     readiness_score: float
     issues: list[ReadinessIssue]
     target_column: str | None
-    inferred_task: str  # "classification" | "regression" | "clustering (no target specified)"
+    inferred_task: (
+        str  # "classification" | "regression" | "clustering (no target specified)"
+    )
 
 
 _SEVERITY_PENALTY = {"high": 15, "medium": 8, "low": 3}
@@ -65,7 +67,9 @@ def _check_encoding_needed(
     )
 
 
-def _check_scaling_needed(eda: EDAResult, exclude: str | None = None) -> ReadinessIssue | None:
+def _check_scaling_needed(
+    eda: EDAResult, exclude: str | None = None
+) -> ReadinessIssue | None:
     numeric_features = [s for s in eda.numeric_stats if s.name != exclude]
     if len(numeric_features) < 2:
         return None
@@ -95,13 +99,16 @@ def _check_multicollinearity(
     eda: EDAResult, exclude: str | None = None
 ) -> ReadinessIssue | None:
     near_duplicates = [
-        p for p in eda.correlation_pairs
+        p
+        for p in eda.correlation_pairs
         if abs(p.correlation) >= 0.9 and exclude not in (p.column_a, p.column_b)
     ]
     if not near_duplicates:
         return None
 
-    affected = sorted({col for p in near_duplicates for col in (p.column_a, p.column_b)})
+    affected = sorted(
+        {col for p in near_duplicates for col in (p.column_a, p.column_b)}
+    )
     pair_descriptions = ", ".join(
         f"{p.column_a}/{p.column_b} ({p.correlation})" for p in near_duplicates
     )
@@ -138,7 +145,8 @@ def _check_unusable_columns(
     profile: DatasetProfile, exclude: str | None = None
 ) -> ReadinessIssue | None:
     unusable = [
-        c for c in (profile.constant_columns + profile.high_cardinality_columns)
+        c
+        for c in (profile.constant_columns + profile.high_cardinality_columns)
         if c != exclude
     ]
     if not unusable:
@@ -163,7 +171,9 @@ def _infer_task_type(df: pd.DataFrame, target_column: str) -> str:
     return "classification"
 
 
-def _check_class_imbalance(df: pd.DataFrame, target_column: str) -> ReadinessIssue | None:
+def _check_class_imbalance(
+    df: pd.DataFrame, target_column: str
+) -> ReadinessIssue | None:
     series = df[target_column].dropna()
     if series.nunique() < 2 or series.nunique() > 15:
         return None
@@ -194,7 +204,8 @@ def _check_target_leakage(
 
     if pd.api.types.is_numeric_dtype(target_series):
         suspicious_pairs = [
-            p for p in eda.correlation_pairs
+            p
+            for p in eda.correlation_pairs
             if target_column in (p.column_a, p.column_b) and abs(p.correlation) >= 0.98
         ]
         other_cols = [
@@ -239,6 +250,28 @@ def assess_ml_readiness(
     target_column: str | None = None,
 ) -> MLReadinessResult:
     issues: list[ReadinessIssue] = []
+    if target_column is not None and target_column not in df.columns:
+        raise ValueError("Target column is not in the dataset")
+    if target_column is not None:
+        target = df[target_column]
+        if target.isna().any():
+            issues.append(
+                ReadinessIssue(
+                    "Missing target labels",
+                    "high",
+                    "Target values are missing. Exclude unlabeled rows or obtain labels before supervised training.",
+                    [target_column],
+                )
+            )
+        if target.nunique() < 2:
+            issues.append(
+                ReadinessIssue(
+                    "Insufficient target variation",
+                    "high",
+                    "The target needs at least two distinct observed values.",
+                    [target_column],
+                )
+            )
 
     for check in (
         _check_missing_values(profile, exclude=target_column),

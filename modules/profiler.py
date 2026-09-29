@@ -30,6 +30,7 @@ class DatasetProfile:
     high_cardinality_columns: list[str]
     columns: list[ColumnProfile] = field(default_factory=list)
 
+
 def profile_dataset(df: pd.DataFrame) -> DatasetProfile:
     n_rows, n_columns = df.shape
     memory_usage_mb = round(df.memory_usage(deep=True).sum() / (1024 * 1024), 3)
@@ -50,12 +51,16 @@ def profile_dataset(df: pd.DataFrame) -> DatasetProfile:
         missing_pct = round((missing_count / n_rows * 100) if n_rows else 0.0, 2)
         unique_count = int(series.nunique(dropna=True))
         is_constant = unique_count <= 1
-        is_high_cardinality = unique_count > 50 and (unique_count / n_rows > 0.5 if n_rows else False)
+        is_high_cardinality = unique_count > 50 and (
+            unique_count / n_rows > 0.5 if n_rows else False
+        )
 
         dtype_str = str(series.dtype)
 
         is_date = pd.api.types.is_datetime64_any_dtype(series)
-        is_numeric = pd.api.types.is_numeric_dtype(series)
+        is_numeric = pd.api.types.is_numeric_dtype(
+            series
+        ) and not pd.api.types.is_bool_dtype(series)
 
         if is_date:
             date_columns.append(col)
@@ -100,4 +105,3 @@ def profile_dataset(df: pd.DataFrame) -> DatasetProfile:
         high_cardinality_columns=high_cardinality_columns,
         columns=columns,
     )
-

@@ -33,7 +33,9 @@ def _gather_context(
     if readiness.issues:
         lines.append("Readiness issues found:")
         for issue in readiness.issues:
-            lines.append(f"  - [{issue.severity}] {issue.category}: {issue.description}")
+            lines.append(
+                f"  - [{issue.severity}] {issue.category}: {issue.description}"
+            )
     else:
         lines.append("No readiness issues found.")
 
@@ -50,15 +52,27 @@ def build_ml_recommendation_prompt(
 _TASK_RECOMMENDATIONS = {
     "classification": [
         ("Logistic Regression", "a simple, interpretable baseline for classification"),
-        ("Random Forest Classifier", "handles non-linear relationships and mixed feature types well"),
+        (
+            "Random Forest Classifier",
+            "handles non-linear relationships and mixed feature types well",
+        ),
     ],
     "regression": [
         ("Linear Regression", "a simple, interpretable baseline for regression"),
-        ("Random Forest Regressor", "handles non-linear relationships without heavy feature engineering"),
+        (
+            "Random Forest Regressor",
+            "handles non-linear relationships without heavy feature engineering",
+        ),
     ],
     "clustering (no target specified)": [
-        ("K-Means", "a standard starting point for grouping similar rows without labels"),
-        ("DBSCAN", "useful if clusters are irregularly shaped or outliers should be isolated"),
+        (
+            "K-Means",
+            "a standard starting point for grouping similar rows without labels",
+        ),
+        (
+            "DBSCAN",
+            "useful if clusters are irregularly shaped or outliers should be isolated",
+        ),
     ],
 }
 
@@ -66,7 +80,9 @@ _TASK_RECOMMENDATIONS = {
 def _fallback_recommendations(readiness: MLReadinessResult) -> str:
     algorithms = _TASK_RECOMMENDATIONS.get(readiness.inferred_task, [])
     has_imbalance = any(i.category == "Class Imbalance" for i in readiness.issues)
-    has_multicollinearity = any(i.category == "Multicollinearity" for i in readiness.issues)
+    has_multicollinearity = any(
+        i.category == "Multicollinearity" for i in readiness.issues
+    )
 
     bullets = []
     for name, reason in algorithms:
@@ -75,7 +91,8 @@ def _fallback_recommendations(readiness: MLReadinessResult) -> str:
     if readiness.inferred_task == "classification":
         metric = (
             "precision, recall, and F1 (not accuracy alone, since class "
-            "imbalance was detected)" if has_imbalance
+            "imbalance was detected)"
+            if has_imbalance
             else "accuracy, with precision/recall as a secondary check"
         )
         bullets.append(f"- Suggested evaluation: {metric}.")
