@@ -1,4 +1,5 @@
 """Cleaning Executor Agent: Governed execution of approved cleaning proposals."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent
@@ -34,8 +35,12 @@ class CleaningExecutorAgent(BaseAgent):
 
         # If any cleaning executed, refresh profile and quality score
         if executed_count > 0:
-            state.profile_result = registry.execute("profile_dataset", state.active_dataset)
-            state.quality_result = registry.execute("assess_quality", state.active_dataset, state.profile_result)
+            state.profile_result = registry.execute(
+                "profile_dataset", state.active_dataset
+            )
+            state.quality_result = registry.execute(
+                "assess_quality", state.active_dataset, state.profile_result
+            )
 
         event = state.record_audit(
             actor_type=ActorType.AGENT,

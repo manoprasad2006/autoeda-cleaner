@@ -1,4 +1,5 @@
 """Data quality scoring tools."""
+
 from __future__ import annotations
 
 import pandas as pd

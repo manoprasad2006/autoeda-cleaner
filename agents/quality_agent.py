@@ -1,4 +1,5 @@
 """Data Quality Agent: Computes quality score and detailed issue breakdown."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent
@@ -26,17 +27,29 @@ class QualityAgent(BaseAgent):
 
         findings = []
         if quality.missing_cell_count > 0:
-            findings.append(f"{quality.missing_cell_count} missing cell(s) across dataset.")
+            findings.append(
+                f"{quality.missing_cell_count} missing cell(s) across dataset."
+            )
         if quality.duplicate_row_count > 0:
-            findings.append(f"{quality.duplicate_row_count} duplicate row(s) identified.")
+            findings.append(
+                f"{quality.duplicate_row_count} duplicate row(s) identified."
+            )
         if quality.inconsistent_columns:
-            findings.append(f"Mixed python types in columns: {quality.inconsistent_columns}.")
+            findings.append(
+                f"Mixed python types in columns: {quality.inconsistent_columns}."
+            )
         if quality.outlier_columns:
-            findings.append(f"IQR outliers in numeric columns: {list(quality.outlier_columns.keys())}.")
+            findings.append(
+                f"IQR outliers in numeric columns: {list(quality.outlier_columns.keys())}."
+            )
         if profile.constant_columns:
-            findings.append(f"Constant/zero-variance columns: {profile.constant_columns}.")
+            findings.append(
+                f"Constant/zero-variance columns: {profile.constant_columns}."
+            )
         if profile.high_cardinality_columns:
-            findings.append(f"High cardinality text columns: {profile.high_cardinality_columns}.")
+            findings.append(
+                f"High cardinality text columns: {profile.high_cardinality_columns}."
+            )
 
         event = state.record_audit(
             actor_type=ActorType.AGENT,

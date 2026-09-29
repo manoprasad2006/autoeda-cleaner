@@ -1,4 +1,5 @@
 """Deterministic cleaning tools with governance and rollback."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -43,14 +44,21 @@ def execute_cleaning_tool(
         raise ValueError(f"Proposal '{proposal_id}' not found.")
 
     approval = state.get_approval_for_proposal(proposal_id)
-    if not approval or approval.status not in (ApprovalStatus.APPROVED, ApprovalStatus.EDITED):
+    if not approval or approval.status not in (
+        ApprovalStatus.APPROVED,
+        ApprovalStatus.EDITED,
+    ):
         status_name = approval.status if approval else "no approval record"
         raise ApprovalRequiredError(
             f"Cannot execute proposal '{proposal_id}': status is '{status_name}'. Must be approved."
         )
 
     # Use edited parameters if present, otherwise proposal parameters
-    params = approval.edited_parameters if approval.status == ApprovalStatus.EDITED else proposal.parameters
+    params = (
+        approval.edited_parameters
+        if approval.status == ApprovalStatus.EDITED
+        else proposal.parameters
+    )
 
     # Start with a candidate copy of the active dataset
     candidate = state.active_dataset.copy(deep=True)
@@ -104,7 +112,9 @@ def execute_cleaning_tool(
                         fill_val = custom_val
                     else:
                         finite = series.replace([np.inf, -np.inf], np.nan).dropna()
-                        fill_val = finite.median() if strategy == "median" else finite.mean()
+                        fill_val = (
+                            finite.median() if strategy == "median" else finite.mean()
+                        )
                     candidate[col] = series.astype("Float64").fillna(fill_val)
                     filled_count += missing
         diff_summary = f"Filled {filled_count} missing numeric cells in {affected_cols} using strategy '{strategy}'."
@@ -124,7 +134,9 @@ def execute_cleaning_tool(
                         fill_val = modes.iloc[0] if not modes.empty else "Missing"
                     candidate[col] = series.fillna(fill_val)
                     filled_count += missing
-        diff_summary = f"Filled {filled_count} missing categorical cells in {affected_cols}."
+        diff_summary = (
+            f"Filled {filled_count} missing categorical cells in {affected_cols}."
+        )
 
     elif action_type == "cap_outliers":
         total_capped = 0
@@ -153,7 +165,9 @@ def execute_cleaning_tool(
         diff_summary = f"Dropped columns: {existing}."
 
     elif action_type == "protect_column":
-        diff_summary = f"Marked columns {affected_cols} as protected from modifications."
+        diff_summary = (
+            f"Marked columns {affected_cols} as protected from modifications."
+        )
 
     else:
         raise ValueError(f"Unknown action_type '{action_type}'.")

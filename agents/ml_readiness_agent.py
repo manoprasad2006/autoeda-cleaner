@@ -1,4 +1,5 @@
 """ML Readiness Agent: Diagnoses machine learning feasibility without automatic model training."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent
@@ -19,7 +20,9 @@ class MLReadinessAgent(BaseAgent):
         profile = state.profile_result
 
         if state.quality_result is None:
-            state.quality_result = registry.execute("assess_quality", df=df, profile=profile)
+            state.quality_result = registry.execute(
+                "assess_quality", df=df, profile=profile
+            )
         quality = state.quality_result
 
         if state.eda_result is None:

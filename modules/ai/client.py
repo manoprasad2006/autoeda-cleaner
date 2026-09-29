@@ -49,7 +49,10 @@ class GeminiClient:
 
             except APIError as exc:
                 last_error = "The AI service is temporarily unavailable."
-                if getattr(exc, "code", None) == 429 and self.model != "gemini-3.1-flash-lite":
+                if (
+                    getattr(exc, "code", None) == 429
+                    and self.model != "gemini-3.1-flash-lite"
+                ):
                     try:
                         fb_resp = self._client.models.generate_content(
                             model="gemini-3.1-flash-lite",
@@ -60,7 +63,9 @@ class GeminiClient:
                         )
                         fb_text = (fb_resp.text or "").strip()
                         if fb_text:
-                            return AIResponse(success=True, text=fb_text, attempts=attempt)
+                            return AIResponse(
+                                success=True, text=fb_text, attempts=attempt
+                            )
                     except Exception:
                         pass
                 if getattr(exc, "code", None) in (400, 401, 403, 404):
@@ -100,9 +105,13 @@ class GroqRotationClient:
         fallback_models: list[str] | None = None,
     ):
         import threading
+
         self.api_keys = [k.strip() for k in api_keys if k and k.strip()]
         self.model = model
-        self.fallback_models = fallback_models or ["openai/gpt-oss-20b", "qwen/qwen3.8-27b"]
+        self.fallback_models = fallback_models or [
+            "openai/gpt-oss-20b",
+            "qwen/qwen3.8-27b",
+        ]
         self._index = 0
         self._lock = threading.Lock()
         self.last_key_number = 1
@@ -121,9 +130,13 @@ class GroqRotationClient:
         from groq import Groq
 
         if not self.api_keys:
-            return AIResponse(success=False, text="", error="No Groq API keys configured.")
+            return AIResponse(
+                success=False, text="", error="No Groq API keys configured."
+            )
 
-        models_to_try = [self.model] + [m for m in self.fallback_models if m != self.model]
+        models_to_try = [self.model] + [
+            m for m in self.fallback_models if m != self.model
+        ]
         attempts = 0
         last_error = ""
 
@@ -146,7 +159,9 @@ class GroqRotationClient:
                         )
                         text = (resp.choices[0].message.content or "").strip()
                         if text:
-                            return AIResponse(success=True, text=text, attempts=attempts)
+                            return AIResponse(
+                                success=True, text=text, attempts=attempts
+                            )
                     except Exception as exc:
                         last_error = str(exc)
                         # If model not found or rate limit, try fallback model or next key
@@ -169,7 +184,11 @@ def get_ai_client() -> GroqRotationClient | GeminiClient | None:
 
     settings = load_settings()
     if settings.has_groq:
-        return GroqRotationClient(api_keys=settings.groq_keys, model=settings.groq_model)
+        return GroqRotationClient(
+            api_keys=settings.groq_keys, model=settings.groq_model
+        )
     elif settings.gemini_api_key:
-        return GeminiClient(api_key=settings.gemini_api_key, model=settings.gemini_model)
+        return GeminiClient(
+            api_key=settings.gemini_api_key, model=settings.gemini_model
+        )
     return None

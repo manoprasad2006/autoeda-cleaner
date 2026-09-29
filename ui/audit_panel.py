@@ -1,4 +1,5 @@
 """Audit log display and version rollback panel."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -20,10 +21,14 @@ def render_audit_panel(state: WorkflowState) -> None:
                     "You can roll back to the parent version to undo the last execution."
                 )
             with r2:
-                if st.button("↩ Rollback to Parent", type="secondary", key="btn_rollback_version"):
+                if st.button(
+                    "↩ Rollback to Parent", type="secondary", key="btn_rollback_version"
+                ):
                     try:
                         rolled_back = state.rollback(reviewer="human_user")
-                        st.success(f"Rolled back active dataset to {rolled_back.version_id}.")
+                        st.success(
+                            f"Rolled back active dataset to {rolled_back.version_id}."
+                        )
                         st.rerun()
                     except Exception as exc:
                         st.error(f"Rollback failed: {exc}")
@@ -37,8 +42,12 @@ def render_audit_panel(state: WorkflowState) -> None:
     actors = ["All"] + sorted(list({e.actor_name for e in state.audit_events}))
     event_types = ["All"] + sorted(list({e.event_type for e in state.audit_events}))
 
-    selected_actor = f_actor.selectbox("Filter by Actor", actors, index=0, key="audit_filter_actor")
-    selected_type = f_type.selectbox("Filter by Event Type", event_types, index=0, key="audit_filter_type")
+    selected_actor = f_actor.selectbox(
+        "Filter by Actor", actors, index=0, key="audit_filter_actor"
+    )
+    selected_type = f_type.selectbox(
+        "Filter by Event Type", event_types, index=0, key="audit_filter_type"
+    )
 
     filtered_events = state.audit_events
     if selected_actor != "All":

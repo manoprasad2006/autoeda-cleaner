@@ -243,7 +243,9 @@ def chart(fig, key=None):
     )
     fig.update_xaxes(gridcolor="#26314a", zerolinecolor="#26314a")
     fig.update_yaxes(gridcolor="#26314a", zerolinecolor="#26314a")
-    st.plotly_chart(fig, width="stretch", key=key, config={"displaylogo": False, "responsive": True})
+    st.plotly_chart(
+        fig, width="stretch", key=key, config={"displaylogo": False, "responsive": True}
+    )
 
 
 def require_data():

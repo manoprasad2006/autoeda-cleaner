@@ -1,4 +1,5 @@
 """Supervisor Agent: Orchestrates the multi-agent lifecycle and enforces governance checkpoints."""
+
 from __future__ import annotations
 
 from datetime import datetime, timezone
@@ -124,13 +125,17 @@ class SupervisorAgent(BaseAgent):
             return self._execute_agent(self.intake_agent, state, WorkflowStage.QUALITY)
 
         elif stage == WorkflowStage.QUALITY:
-            return self._execute_agent(self.quality_agent, state, WorkflowStage.CLEANING_PLAN)
+            return self._execute_agent(
+                self.quality_agent, state, WorkflowStage.CLEANING_PLAN
+            )
 
         elif stage == WorkflowStage.CLEANING_PLAN:
             result = self._execute_agent(self.cleaning_planner, state, None)
             if state.proposals:
                 # Cleaning proposals exist; transition to waiting for cleaning approval
-                self.transition_stage(state, WorkflowStage.WAITING_FOR_CLEANING_APPROVAL)
+                self.transition_stage(
+                    state, WorkflowStage.WAITING_FOR_CLEANING_APPROVAL
+                )
                 state.status = WorkflowStatus.WAITING_FOR_APPROVAL
             else:
                 self.transition_stage(state, WorkflowStage.VISUALIZATION_AND_EDA)
@@ -150,8 +155,10 @@ class SupervisorAgent(BaseAgent):
                 "protect_column",
             }
             pending_cleaning = [
-                a for a in state.approvals
-                if a.action_type in cleaning_actions and a.status == ApprovalStatus.PENDING
+                a
+                for a in state.approvals
+                if a.action_type in cleaning_actions
+                and a.status == ApprovalStatus.PENDING
             ]
             if pending_cleaning:
                 state.status = WorkflowStatus.WAITING_FOR_APPROVAL
@@ -166,13 +173,19 @@ class SupervisorAgent(BaseAgent):
             return self.step(state)
 
         elif stage == WorkflowStage.CLEANING_EXECUTION:
-            return self._execute_agent(self.cleaning_executor, state, WorkflowStage.VISUALIZATION_AND_EDA)
+            return self._execute_agent(
+                self.cleaning_executor, state, WorkflowStage.VISUALIZATION_AND_EDA
+            )
 
         elif stage == WorkflowStage.VISUALIZATION_AND_EDA:
-            return self._execute_agent(self.visualization_agent, state, WorkflowStage.ML_READINESS)
+            return self._execute_agent(
+                self.visualization_agent, state, WorkflowStage.ML_READINESS
+            )
 
         elif stage == WorkflowStage.ML_READINESS:
-            return self._execute_agent(self.ml_readiness_agent, state, WorkflowStage.INSIGHT_GENERATION)
+            return self._execute_agent(
+                self.ml_readiness_agent, state, WorkflowStage.INSIGHT_GENERATION
+            )
 
         elif stage == WorkflowStage.INSIGHT_GENERATION:
             result = self._execute_agent(self.insight_agent, state, None)
@@ -182,8 +195,10 @@ class SupervisorAgent(BaseAgent):
 
         elif stage == WorkflowStage.WAITING_FOR_INSIGHT_REVIEW:
             insight_approvals = [
-                a for a in state.approvals
-                if a.action_type == "review_ai_insights" and a.status == ApprovalStatus.PENDING
+                a
+                for a in state.approvals
+                if a.action_type == "review_ai_insights"
+                and a.status == ApprovalStatus.PENDING
             ]
             if insight_approvals:
                 state.status = WorkflowStatus.WAITING_FOR_APPROVAL
@@ -204,8 +219,10 @@ class SupervisorAgent(BaseAgent):
 
         elif stage == WorkflowStage.WAITING_FOR_EXPORT_APPROVAL:
             export_approvals = [
-                a for a in state.approvals
-                if a.action_type == "export_dataset" and a.status == ApprovalStatus.PENDING
+                a
+                for a in state.approvals
+                if a.action_type == "export_dataset"
+                and a.status == ApprovalStatus.PENDING
             ]
             if export_approvals:
                 state.status = WorkflowStatus.WAITING_FOR_APPROVAL
@@ -262,7 +279,9 @@ class SupervisorAgent(BaseAgent):
 
             if not result.success:
                 state.status = WorkflowStatus.FAILED
-                state.error_message = result.error or "Agent failed without explicit error."
+                state.error_message = (
+                    result.error or "Agent failed without explicit error."
+                )
                 state.record_audit(
                     actor_type=ActorType.AGENT,
                     actor_name=agent.name,

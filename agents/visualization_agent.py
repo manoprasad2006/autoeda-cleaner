@@ -1,4 +1,5 @@
 """Visualization Agent: Recommends semantically sound charts and aggregations."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent

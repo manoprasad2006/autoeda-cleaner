@@ -1,4 +1,5 @@
 """Report Agent: Compiles verified intelligence into governed report proposals."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent
@@ -39,7 +40,10 @@ class ReportAgent(BaseAgent):
             actor_name=self.name,
             event_type=EventType.REPORT_GENERATED,
             message="Intelligence report compiled. Awaiting human export approval.",
-            metadata={"active_version": state.active_version_id, "rows": len(state.active_dataset)},
+            metadata={
+                "active_version": state.active_version_id,
+                "rows": len(state.active_dataset),
+            },
         )
 
         return AgentResult(

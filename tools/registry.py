@@ -1,4 +1,5 @@
 """Safe, governed tool registry for agent execution."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass
@@ -29,6 +30,7 @@ class ToolRegistry:
         handler: Callable[..., Any] | None = None,
     ) -> Callable[..., Any]:
         """Can be used as a method or a decorator."""
+
         def decorator(fn: Callable[..., Any]) -> Callable[..., Any]:
             tool_def = ToolDefinition(
                 name=name,

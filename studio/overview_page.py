@@ -67,15 +67,29 @@ st.caption(
 
 wf_state = st.session_state.get("workflow_state")
 if wf_state:
-    pending_count = len([a for a in getattr(wf_state, "approvals", []) if getattr(a, "status", "") == "pending"])
+    pending_count = len(
+        [
+            a
+            for a in getattr(wf_state, "approvals", [])
+            if getattr(a, "status", "") == "pending"
+        ]
+    )
     ov_c1, ov_c2 = st.columns([3, 1])
     with ov_c1:
         if pending_count > 0:
-            st.warning(f"⚠️ **Governance Notice:** {pending_count} proposal(s) awaiting your decision in the Agent Governance Hub.")
+            st.warning(
+                f"⚠️ **Governance Notice:** {pending_count} proposal(s) awaiting your decision in the Agent Governance Hub."
+            )
         else:
-            st.info(f"✦ **Governed Multi-Agent Pipeline:** Active version is **{wf_state.active_version_id}** ({wf_state.current_stage}).")
+            st.info(
+                f"✦ **Governed Multi-Agent Pipeline:** Active version is **{wf_state.active_version_id}** ({wf_state.current_stage})."
+            )
     with ov_c2:
-        st.page_link("studio/agent_page.py", label="Open Agent Hub →", icon=":material/smart_toy:")
+        st.page_link(
+            "studio/agent_page.py",
+            label="Open Agent Hub →",
+            icon=":material/smart_toy:",
+        )
 kpis = [
     ("Records", f"{len(df):,}"),
     ("Columns", str(len(df.columns))),

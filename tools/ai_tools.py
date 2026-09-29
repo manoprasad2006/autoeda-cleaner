@@ -1,4 +1,5 @@
 """Governed AI tools with privacy boundaries, prompt sanitization, and deterministic fallbacks."""
+
 from __future__ import annotations
 
 import json
@@ -117,7 +118,11 @@ def generate_ai_summary_tool(
     quality = state.quality_result
 
     q_score = quality.overall_score if quality else 80.0
-    missing_pct = (quality.missing_cell_count / (len(df) * len(df.columns)) * 100) if (quality and len(df) and len(df.columns)) else 0.0
+    missing_pct = (
+        (quality.missing_cell_count / (len(df) * len(df.columns)) * 100)
+        if (quality and len(df) and len(df.columns))
+        else 0.0
+    )
 
     if not api_key:
         return _deterministic_summary_fallback(
@@ -174,10 +179,19 @@ def generate_business_insights_tool(
 
     num_cols = profile.numerical_columns if profile else []
     cat_cols = profile.categorical_columns if profile else []
-    corr_dicts = [
-        {"column_a": p.column_a, "column_b": p.column_b, "correlation": p.correlation, "strength": p.strength}
-        for p in eda.correlation_pairs
-    ] if eda else []
+    corr_dicts = (
+        [
+            {
+                "column_a": p.column_a,
+                "column_b": p.column_b,
+                "correlation": p.correlation,
+                "strength": p.strength,
+            }
+            for p in eda.correlation_pairs
+        ]
+        if eda
+        else []
+    )
 
     fallback = _deterministic_insights_fallback(num_cols, cat_cols, corr_dicts)
 

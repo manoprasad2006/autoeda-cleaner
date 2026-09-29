@@ -1,4 +1,5 @@
 """Profiling and exploratory data analysis tools."""
+
 from __future__ import annotations
 
 import pandas as pd

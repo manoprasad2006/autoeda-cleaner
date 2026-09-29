@@ -1,4 +1,5 @@
 """Insight Agent: Generates structured business hypotheses and AI summaries."""
+
 from __future__ import annotations
 
 from agents.base import BaseAgent

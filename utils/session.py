@@ -54,6 +54,7 @@ def set_dataset(df: pd.DataFrame, metadata: Any, filename: str) -> None:
     st.session_state[DATASET_METADATA] = metadata
     st.session_state[DATASET_FILENAME] = filename
     from workflow.state import WorkflowState
+
     st.session_state[WORKFLOW_STATE] = WorkflowState.create_initial(
         df=df, filename=filename, metadata=metadata
     )
@@ -195,6 +196,7 @@ def set_workflow_state(state: Any) -> None:
         if getattr(state, "active_version_id", "v0") != "v0":
             st.session_state[CLEANED_DATASET] = state.active_dataset.copy(deep=True)
             from modules.cleaner import CleaningLog
+
             if st.session_state.get(CLEANING_LOG) is None:
                 log = CleaningLog()
                 for e in getattr(state, "audit_events", []):
@@ -242,7 +244,10 @@ def restore_original() -> None:
     st.session_state["dataset_version"] = st.session_state.get("dataset_version", 0) + 1
     if orig is not None:
         from workflow.state import WorkflowState
-        st.session_state[WORKFLOW_STATE] = WorkflowState.create_initial(orig, fname, meta)
+
+        st.session_state[WORKFLOW_STATE] = WorkflowState.create_initial(
+            orig, fname, meta
+        )
 
 
 def _log_event(event: str, df: pd.DataFrame) -> None:

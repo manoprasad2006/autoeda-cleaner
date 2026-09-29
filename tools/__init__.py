@@ -1,4 +1,5 @@
 """Tools package exports and default registry initialization."""
+
 from tools.registry import ToolDefinition, ToolRegistry, registry
 from tools import (
     ai_tools as ai_tools,

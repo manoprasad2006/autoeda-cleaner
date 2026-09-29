@@ -1,4 +1,5 @@
 """Proposal visualization component showing before/after diffs and risk level."""
+
 from __future__ import annotations
 
 import streamlit as st
@@ -21,7 +22,9 @@ def render_proposal_card(proposal: Proposal, is_pending: bool = True) -> None:
         top_c1, top_c2 = st.columns([3, 1])
         with top_c1:
             st.markdown(f"### {proposal.title}")
-            st.caption(f"Proposed by **{proposal.agent_name}** · Action: `{proposal.action_type}` · ID: `{proposal.id}`")
+            st.caption(
+                f"Proposed by **{proposal.agent_name}** · Action: `{proposal.action_type}` · ID: `{proposal.id}`"
+            )
 
         with top_c2:
             st.markdown(
@@ -93,4 +96,6 @@ def render_proposal_card(proposal: Proposal, is_pending: bool = True) -> None:
                     "Explicit user authorization ensures data is never shared or exported without consent."
                 )
             else:
-                st.write("This proposal was formulated by the autonomous planning agent to address detected data quality issues.")
+                st.write(
+                    "This proposal was formulated by the autonomous planning agent to address detected data quality issues."
+                )

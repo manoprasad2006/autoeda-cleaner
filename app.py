@@ -1,6 +1,7 @@
 import streamlit as st
 import importlib
 import studio.pet_assistant
+
 importlib.reload(studio.pet_assistant)
 from studio.pet_assistant import render_pet_assistant
 from studio.common import style
@@ -32,7 +33,13 @@ with st.sidebar:
         )
         wf_state = st.session_state.get("workflow_state")
         if wf_state:
-            pending_n = len([a for a in getattr(wf_state, "approvals", []) if getattr(a, "status", "") == "pending"])
+            pending_n = len(
+                [
+                    a
+                    for a in getattr(wf_state, "approvals", [])
+                    if getattr(a, "status", "") == "pending"
+                ]
+            )
             if pending_n > 0:
                 st.warning(f"⚠️ {pending_n} decision(s) pending review")
             else:

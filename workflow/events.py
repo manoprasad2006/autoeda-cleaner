@@ -1,4 +1,5 @@
 """Audit event data models and standard event types."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field

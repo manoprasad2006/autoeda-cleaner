@@ -1,4 +1,5 @@
 """Shared workflow state with strict immutability and versioning."""
+
 from __future__ import annotations
 
 from dataclasses import dataclass, field
@@ -77,7 +78,9 @@ class Proposal:
     before_summary: str
     expected_after_summary: str
     requires_approval: bool = True
-    status: str = "pending"  # pending, approved, rejected, edited, executed, rolled_back
+    status: str = (
+        "pending"  # pending, approved, rejected, edited, executed, rolled_back
+    )
     created_at: str = ""
     executed_at: str | None = None
 
@@ -261,7 +264,10 @@ class WorkflowState:
             message=f"Created proposal '{proposal.title}' (Risk: {proposal.risk_level.upper()})",
             proposal_id=proposal.id,
             approval_id=approval.id,
-            metadata={"action_type": proposal.action_type, "params": proposal.parameters},
+            metadata={
+                "action_type": proposal.action_type,
+                "params": proposal.parameters,
+            },
         )
         self.record_audit(
             actor_type=ActorType.SYSTEM,
@@ -319,7 +325,10 @@ class WorkflowState:
 
     def can_rollback(self) -> bool:
         current_version = self.get_version(self.active_version_id)
-        return current_version is not None and current_version.parent_version_id is not None
+        return (
+            current_version is not None
+            and current_version.parent_version_id is not None
+        )
 
     def get_version(self, version_id: str) -> DatasetVersion | None:
         for v in self.versions:
@@ -335,12 +344,16 @@ class WorkflowState:
 
         parent_version = self.get_version(current_version.parent_version_id)
         if not parent_version:
-            raise RollbackError(f"Parent version '{current_version.parent_version_id}' not found.")
+            raise RollbackError(
+                f"Parent version '{current_version.parent_version_id}' not found."
+            )
 
         # Create a new version representing the rollback
         now = datetime.now(timezone.utc).isoformat()
         rollback_ver_id = f"v{len(self.versions)}"
-        summary = f"Rollback from {self.active_version_id} to {parent_version.version_id}"
+        summary = (
+            f"Rollback from {self.active_version_id} to {parent_version.version_id}"
+        )
         rb_version = DatasetVersion(
             version_id=rollback_ver_id,
             parent_version_id=self.active_version_id,

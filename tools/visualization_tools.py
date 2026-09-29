@@ -1,4 +1,5 @@
 """Visualization recommendation tools with semantic aggregation safety."""
+
 from __future__ import annotations
 
 from typing import Any
@@ -36,7 +37,10 @@ def is_non_additive_measure(column_name: str) -> bool:
     that should NEVER be summed."""
     col_lower = column_name.lower().replace("_", " ").replace("-", " ")
     tokens = col_lower.split()
-    return any(kw in tokens or any(kw in token for token in tokens) for kw in NON_ADDITIVE_KEYWORDS)
+    return any(
+        kw in tokens or any(kw in token for token in tokens)
+        for kw in NON_ADDITIVE_KEYWORDS
+    )
 
 
 @registry.register(
@@ -58,7 +62,11 @@ def recommend_visualizations_tool(
         recs_type = "histogram"
         reason = (
             f"Numeric column '{col}' is best understood via its frequency distribution. "
-            + ("Note: This measure is non-additive (e.g., score/rate); avoid summing." if non_additive else "")
+            + (
+                "Note: This measure is non-additive (e.g., score/rate); avoid summing."
+                if non_additive
+                else ""
+            )
         )
         recommendations.append(
             {
@@ -98,9 +106,10 @@ def recommend_visualizations_tool(
         num_col = profile.numerical_columns[0]
         non_additive = is_non_additive_measure(num_col)
         agg = "mean" if non_additive else "sum"
-        reason = (
-            f"Comparing {num_col} across {cat_col}. "
-            + (f"Using '{agg}' because '{num_col}' is an intensity/rate/score and cannot be summed." if non_additive else f"Using '{agg}' aggregation.")
+        reason = f"Comparing {num_col} across {cat_col}. " + (
+            f"Using '{agg}' because '{num_col}' is an intensity/rate/score and cannot be summed."
+            if non_additive
+            else f"Using '{agg}' aggregation."
         )
         recommendations.append(
             {
@@ -126,7 +135,8 @@ def recommend_visualizations_tool(
                     "y_column": pair.column_b,
                     "group_by": None,
                     "recommended_aggregation": "none",
-                    "is_non_additive": is_non_additive_measure(pair.column_a) or is_non_additive_measure(pair.column_b),
+                    "is_non_additive": is_non_additive_measure(pair.column_a)
+                    or is_non_additive_measure(pair.column_b),
                     "reason": f"High correlation ({pair.correlation:+.2f}) detected between '{pair.column_a}' and '{pair.column_b}'. Inspect relationship directly.",
                 }
             )

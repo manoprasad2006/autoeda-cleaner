@@ -1,4 +1,5 @@
 """Cleaning Planner Agent: Formulates governed cleaning proposals with risk levels."""
+
 from __future__ import annotations
 
 
@@ -62,7 +63,11 @@ class CleaningPlannerAgent(BaseAgent):
             proposals.append(p_dedup)
 
         # 3. Proposal: Trim surrounding whitespace in text columns
-        text_cols = [c for c in df.select_dtypes(include=["object", "string"]).columns if c not in protected_cols]
+        text_cols = [
+            c
+            for c in df.select_dtypes(include=["object", "string"]).columns
+            if c not in protected_cols
+        ]
         cols_with_whitespace = []
         rows_with_ws = 0
         for col in text_cols:
@@ -101,7 +106,11 @@ class CleaningPlannerAgent(BaseAgent):
                     # Never fill all-null columns
                     if pct >= 100.0:
                         continue
-                    risk = RiskLevel.HIGH if pct > 30 else (RiskLevel.MEDIUM if pct > 10 else RiskLevel.LOW)
+                    risk = (
+                        RiskLevel.HIGH
+                        if pct > 30
+                        else (RiskLevel.MEDIUM if pct > 10 else RiskLevel.LOW)
+                    )
                     p_num = Proposal.create(
                         agent_name=self.name,
                         action_type="fill_numeric_missing",

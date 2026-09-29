@@ -1,4 +1,5 @@
 """Tests for Tom Lizard AI pet assistant."""
+
 from __future__ import annotations
 
 import pandas as pd
@@ -48,13 +49,17 @@ def test_determine_pet_state_transitions():
 
     # 4. Waiting for approval (normal) -> waiting
     state.status = WorkflowStatus.WAITING_FOR_APPROVAL
-    appr_low = ApprovalRequest.create("wf", "prop", "agent", "trim_text", "desc", ["a"], 1, RiskLevel.LOW)
+    appr_low = ApprovalRequest.create(
+        "wf", "prop", "agent", "trim_text", "desc", ["a"], 1, RiskLevel.LOW
+    )
     state.approvals = [appr_low]
     anim, badge, _ = determine_pet_state(state)
     assert anim == "waiting"
 
     # 5. Waiting for approval with High Risk -> review
-    appr_high = ApprovalRequest.create("wf", "prop2", "agent", "cap_outliers", "desc", ["a"], 1, RiskLevel.HIGH)
+    appr_high = ApprovalRequest.create(
+        "wf", "prop2", "agent", "cap_outliers", "desc", ["a"], 1, RiskLevel.HIGH
+    )
     state.approvals = [appr_low, appr_high]
     anim, badge, _ = determine_pet_state(state)
     assert anim == "review"

@@ -1,4 +1,5 @@
 """Human-in-the-Loop approval panel with granular review and risk confirmation."""
+
 from __future__ import annotations
 
 import json
@@ -22,13 +23,19 @@ def render_approval_panel(
     on_action_applied: Callable[[], None] | None = None,
 ) -> None:
     """Renders all pending and resolved approval requests."""
-    pending_approvals = [a for a in state.approvals if a.status == ApprovalStatus.PENDING]
-    resolved_approvals = [a for a in state.approvals if a.status != ApprovalStatus.PENDING]
+    pending_approvals = [
+        a for a in state.approvals if a.status == ApprovalStatus.PENDING
+    ]
+    resolved_approvals = [
+        a for a in state.approvals if a.status != ApprovalStatus.PENDING
+    ]
 
     st.subheader(f"Governance & Approval Decisions ({len(pending_approvals)} Pending)")
 
     if not pending_approvals and not resolved_approvals:
-        st.info("No approval requests have been submitted yet. Run the agent workflow to inspect proposals.")
+        st.info(
+            "No approval requests have been submitted yet. Run the agent workflow to inspect proposals."
+        )
         return
 
     if pending_approvals:
@@ -95,7 +102,9 @@ def render_approval_panel(
                         "✕ Reject",
                         key=f"btn_rej_{approval.id}",
                     ):
-                        reject_request(approval, reviewer="human_user", note=reject_note)
+                        reject_request(
+                            approval, reviewer="human_user", note=reject_note
+                        )
                         st.warning(f"Rejected: {proposal.title}")
                         if on_action_applied:
                             on_action_applied()
@@ -130,7 +139,9 @@ def render_approval_panel(
             st.divider()
             b1, b2 = st.columns([2, 2])
             with b1:
-                st.write(f"**{len(selected_for_batch)} proposal(s) selected for approval.**")
+                st.write(
+                    f"**{len(selected_for_batch)} proposal(s) selected for approval.**"
+                )
             with b2:
                 if st.button(
                     f"✓ Apply {len(selected_for_batch)} Selected Approvals",
@@ -139,7 +150,9 @@ def render_approval_panel(
                 ):
                     for appr in selected_for_batch:
                         approve_request(appr, reviewer="human_user")
-                    st.success(f"Applied approvals for {len(selected_for_batch)} proposal(s).")
+                    st.success(
+                        f"Applied approvals for {len(selected_for_batch)} proposal(s)."
+                    )
                     if on_action_applied:
                         on_action_applied()
                     st.rerun()
@@ -149,7 +162,9 @@ def render_approval_panel(
         with st.expander(f"📜 Resolved Approvals History ({len(resolved_approvals)})"):
             for appr in resolved_approvals:
                 prop = state.get_proposal(appr.proposal_id)
-                status_color = "#16a34a" if appr.status in ("approved", "edited") else "#dc2626"
+                status_color = (
+                    "#16a34a" if appr.status in ("approved", "edited") else "#dc2626"
+                )
                 st.markdown(
                     f"**{prop.title if prop else appr.proposal_id}** — "
                     f'<span style="color:{status_color};font-weight:bold;">{appr.status.upper()}</span> '

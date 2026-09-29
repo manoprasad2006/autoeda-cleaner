@@ -125,11 +125,16 @@ with audit:
     wf_state = st.session_state.get("workflow_state")
     if has_cleaned_dataset():
         st.success("A cleaned version is active across your workspace.")
-        if log is not None and hasattr(log, "to_dataframe") and not log.to_dataframe().empty:
+        if (
+            log is not None
+            and hasattr(log, "to_dataframe")
+            and not log.to_dataframe().empty
+        ):
             st.dataframe(log.to_dataframe(), hide_index=True, width="stretch")
         elif wf_state and getattr(wf_state, "audit_events", None):
             cleaning_events = [
-                e for e in wf_state.audit_events
+                e
+                for e in wf_state.audit_events
                 if e.event_type in ("Cleaning executed", "Cleaning rolled back")
             ]
             if cleaning_events:

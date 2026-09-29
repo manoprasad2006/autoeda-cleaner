@@ -1,4 +1,5 @@
 """Agent status, stage timeline, and notification banner components."""
+
 from __future__ import annotations
 
 import streamlit as st
@@ -61,7 +62,9 @@ def render_workflow_header(state: WorkflowState) -> None:
 
     with c3:
         st.caption("ACTIVE VERSION")
-        st.markdown(f"**{state.active_version_id}** ({len(state.versions)} version(s) tracked)")
+        st.markdown(
+            f"**{state.active_version_id}** ({len(state.versions)} version(s) tracked)"
+        )
 
     with c4:
         st.caption("STEPS")
@@ -130,7 +133,7 @@ def render_agent_timeline(state: WorkflowState) -> None:
 
     st.markdown(
         f"""<div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;scrollbar-width:thin;">
-        {''.join(nodes)}
+        {"".join(nodes)}
         </div>""",
         unsafe_allow_html=True,
     )

@@ -1,4 +1,5 @@
 """Agent Orchestration and Governance Hub page."""
+
 from __future__ import annotations
 
 import streamlit as st
@@ -68,7 +69,9 @@ with ctrl1:
         btn_label = "⚡ Run Autonomous Pipeline"
         btn_type = "primary"
 
-    if st.button(btn_label, type=btn_type, disabled=state.status == WorkflowStatus.COMPLETED):
+    if st.button(
+        btn_label, type=btn_type, disabled=state.status == WorkflowStatus.COMPLETED
+    ):
         with st.spinner("Agents coordinating..."):
             if state.status == WorkflowStatus.WAITING_FOR_APPROVAL:
                 supervisor.resume_workflow(state)
@@ -88,16 +91,23 @@ with ctrl3:
     if st.button("🔄 Reset Workflow"):
         filename = state.dataset_filename
         metadata = state.dataset_metadata
-        new_state = WorkflowState.create_initial(state.original_dataset, filename, metadata)
+        new_state = WorkflowState.create_initial(
+            state.original_dataset, filename, metadata
+        )
         set_workflow_state(new_state)
         st.success("Workflow reset to original immutable dataset.")
         st.rerun()
 
 with ctrl4:
-    st.caption(f"Original dataset: **{state.dataset_filename}** ({len(state.original_dataset):,} rows)")
-    st.caption(f"Active version: **{state.active_version_id}** ({len(state.active_dataset):,} rows)")
+    st.caption(
+        f"Original dataset: **{state.dataset_filename}** ({len(state.original_dataset):,} rows)"
+    )
+    st.caption(
+        f"Active version: **{state.active_version_id}** ({len(state.active_dataset):,} rows)"
+    )
     if state.active_version_id != "v0":
         from modules.exports import csv_bytes
+
         st.download_button(
             label=f"📥 Download {state.active_version_id} CSV",
             data=csv_bytes(state.active_dataset),
@@ -108,7 +118,11 @@ with ctrl4:
 
 # Main Hub Tabs
 tab_approvals, tab_findings, tab_audit = st.tabs(
-    ["🛡️ Governance & Approvals", "🔍 Intelligence & Findings", "📜 Full Audit Trail & Rollback"]
+    [
+        "🛡️ Governance & Approvals",
+        "🔍 Intelligence & Findings",
+        "📜 Full Audit Trail & Rollback",
+    ]
 )
 
 with tab_approvals:
@@ -134,7 +148,9 @@ with tab_findings:
                 st.metric("ML Readiness Score", f"{ml.readiness_score:.1f}/100")
                 st.caption(f"Inferred Task: **{ml.inferred_task}**")
                 for iss in ml.issues:
-                    st.warning(f"**[{iss.severity.upper()}] {iss.category}:** {iss.description}")
+                    st.warning(
+                        f"**[{iss.severity.upper()}] {iss.category}:** {iss.description}"
+                    )
             else:
                 st.caption("ML readiness agent has not run yet.")
 
@@ -156,7 +172,9 @@ with tab_findings:
             if state.ai_insights_structured:
                 for ins in state.ai_insights_structured:
                     st.markdown(f"**Hypothesis:** {ins.get('hypothesis')}")
-                    st.caption(f"Evidence: {ins.get('evidence')} | Confidence: {ins.get('confidence')}")
+                    st.caption(
+                        f"Evidence: {ins.get('evidence')} | Confidence: {ins.get('confidence')}"
+                    )
                     st.caption(f"_{ins.get('disclaimer')}_")
                     st.divider()
             elif state.generated_insights:

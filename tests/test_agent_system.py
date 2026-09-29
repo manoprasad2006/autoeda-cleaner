@@ -21,6 +21,7 @@ Covers all 20 required specifications:
 19. Visualization aggregation semantics
 20. Streamlit approval-panel interaction
 """
+
 from __future__ import annotations
 
 import pandas as pd
@@ -169,7 +170,9 @@ def test_approval_execution(sample_df):
 
     # Unapproved proposal execution should raise ApprovalRequiredError
     with pytest.raises(ApprovalRequiredError):
-        registry.execute("execute_cleaning", state=state, proposal_id=state.proposals[0].id)
+        registry.execute(
+            "execute_cleaning", state=state, proposal_id=state.proposals[0].id
+        )
 
     # Approve the first proposal
     first_appr = state.approvals[0]
@@ -190,13 +193,17 @@ def test_rejection_behavior(sample_df):
     planner = CleaningPlannerAgent()
     planner.run(state)
     first_appr = state.approvals[0]
-    reject_request(first_appr, reviewer="human_user", note="Do not modify duplicates yet")
+    reject_request(
+        first_appr, reviewer="human_user", note="Do not modify duplicates yet"
+    )
     assert first_appr.status == ApprovalStatus.REJECTED
     assert first_appr.reviewer_note == "Do not modify duplicates yet"
 
     # Execution should be rejected
     with pytest.raises(ApprovalRequiredError):
-        registry.execute("execute_cleaning", state=state, proposal_id=first_appr.proposal_id)
+        registry.execute(
+            "execute_cleaning", state=state, proposal_id=first_appr.proposal_id
+        )
 
 
 # 8. Edit-and-approve behavior
@@ -227,7 +234,9 @@ def test_edit_and_approve_behavior(sample_df):
     assert appr.edited_parameters["custom_value"] == 99.0
 
     # Execute
-    candidate, diff = registry.execute("execute_cleaning", state=state, proposal_id=prop.id)
+    candidate, diff = registry.execute(
+        "execute_cleaning", state=state, proposal_id=prop.id
+    )
     assert 99.0 in candidate["score"].values
 
 
@@ -322,7 +331,16 @@ def test_multiple_pending_approvals(sample_df):
         "Agent", "trim_text", "Trim", "Desc", ["name"], 1, RiskLevel.LOW, {}, "b", "a"
     )
     p2 = Proposal.create(
-        "Agent", "remove_duplicates", "Dedup", "Desc", ["all"], 1, RiskLevel.LOW, {}, "b", "a"
+        "Agent",
+        "remove_duplicates",
+        "Dedup",
+        "Desc",
+        ["all"],
+        1,
+        RiskLevel.LOW,
+        {},
+        "b",
+        "a",
     )
     a1 = state.add_proposal(p1)
     a2 = state.add_proposal(p2)
@@ -342,7 +360,9 @@ def test_multiple_pending_approvals(sample_df):
 def test_high_risk_actions_require_approval(sample_df):
     planner = CleaningPlannerAgent()
     state = WorkflowState.create_initial(sample_df, "test.csv")
-    state.quality_result = registry.execute("assess_quality", sample_df, registry.execute("profile_dataset", sample_df))
+    state.quality_result = registry.execute(
+        "assess_quality", sample_df, registry.execute("profile_dataset", sample_df)
+    )
     planner.run(state)
 
     for prop in state.proposals:
@@ -363,7 +383,16 @@ def test_audit_events(sample_df):
     assert any(e.event_type == EventType.INTAKE_COMPLETED for e in state.audit_events)
 
     prop = Proposal.create(
-        "TestAgent", "protect_column", "Protect ID", "Protect", ["id"], 0, RiskLevel.LOW, {}, "b", "a"
+        "TestAgent",
+        "protect_column",
+        "Protect ID",
+        "Protect",
+        ["id"],
+        0,
+        RiskLevel.LOW,
+        {},
+        "b",
+        "a",
     )
     state.add_proposal(prop)
     assert any(e.event_type == EventType.PROPOSAL_CREATED for e in state.audit_events)
@@ -374,7 +403,9 @@ def test_audit_events(sample_df):
 def test_gemini_unavailable_fallback(sample_df):
     state = WorkflowState.create_initial(sample_df, "test.csv")
     state.profile_result = registry.execute("profile_dataset", sample_df)
-    state.quality_result = registry.execute("assess_quality", sample_df, state.profile_result)
+    state.quality_result = registry.execute(
+        "assess_quality", sample_df, state.profile_result
+    )
     state.eda_result = registry.execute("run_eda", sample_df, ["score"], ["category"])
 
     # Run AI summary with NO api_key
@@ -400,7 +431,9 @@ def test_prompt_length_limits(sample_df):
         n_rows=100000,
         n_cols=50,
         quality_score=95.0,
-        columns_summary=[{"name": "col_1", "type": "int", "missing_pct": 0, "unique_count": 5}],
+        columns_summary=[
+            {"name": "col_1", "type": "int", "missing_pct": 0, "unique_count": 5}
+        ],
     )
     assert len(prompt) < 10000
     assert "Alice" not in prompt  # Raw data values are strictly excluded
@@ -416,7 +449,9 @@ def test_ai_output_review_requirement(sample_df):
     _ = sup.step(state)
     assert state.current_stage == WorkflowStage.WAITING_FOR_INSIGHT_REVIEW
     assert state.status == WorkflowStatus.WAITING_FOR_APPROVAL
-    review_appr = next((a for a in state.approvals if a.action_type == "review_ai_insights"), None)
+    review_appr = next(
+        (a for a in state.approvals if a.action_type == "review_ai_insights"), None
+    )
     assert review_appr is not None
     assert review_appr.status == ApprovalStatus.PENDING
 
@@ -429,7 +464,9 @@ def test_report_export_approval_requirement(sample_df):
     _ = sup.step(state)
     assert state.current_stage == WorkflowStage.WAITING_FOR_EXPORT_APPROVAL
     assert state.status == WorkflowStatus.WAITING_FOR_APPROVAL
-    export_appr = next((a for a in state.approvals if a.action_type == "export_dataset"), None)
+    export_appr = next(
+        (a for a in state.approvals if a.action_type == "export_dataset"), None
+    )
     assert export_appr is not None
     assert export_appr.status == ApprovalStatus.PENDING
 
@@ -448,7 +485,9 @@ def test_visualization_aggregation_semantics(sample_df):
     assert is_non_additive_measure("total_sales_revenue") is False
 
     profile = registry.execute("profile_dataset", sample_df)
-    eda = registry.execute("run_eda", sample_df, ["score", "satisfaction_rating"], ["category"])
+    eda = registry.execute(
+        "run_eda", sample_df, ["score", "satisfaction_rating"], ["category"]
+    )
     recs = registry.execute("recommend_visualizations", sample_df, profile, eda)
 
     for rec in recs:
@@ -475,6 +514,15 @@ def test_approval_panel_and_ui_interaction(sample_df):
     render_agent_timeline(state)
 
     prop = Proposal.create(
-        "TestAgent", "remove_duplicates", "Dedup", "Desc", ["all"], 1, RiskLevel.LOW, {}, "b", "a"
+        "TestAgent",
+        "remove_duplicates",
+        "Dedup",
+        "Desc",
+        ["all"],
+        1,
+        RiskLevel.LOW,
+        {},
+        "b",
+        "a",
     )
     render_proposal_card(prop, is_pending=True)
