@@ -1,6 +1,9 @@
 import streamlit as st
-from studio.common import style
+import importlib
+import studio.pet_assistant
+importlib.reload(studio.pet_assistant)
 from studio.pet_assistant import render_pet_assistant
+from studio.common import style
 from utils.config import load_settings
 from utils.session import init_session_state, has_dataset, has_cleaned_dataset
 
