@@ -1,5 +1,6 @@
 import streamlit as st
 from studio.common import style
+from studio.pet_assistant import render_pet_assistant
 from utils.config import load_settings
 from utils.session import init_session_state, has_dataset, has_cleaned_dataset
 
@@ -18,6 +19,7 @@ settings = load_settings()
 with st.sidebar:
     st.markdown("## ✦ IntelliData")
     st.caption("D A T A   S T U D I O")
+    render_pet_assistant()
     st.divider()
     if has_dataset():
         st.caption("ACTIVE WORKSPACE")
