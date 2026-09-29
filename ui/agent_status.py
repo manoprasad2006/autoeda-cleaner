@@ -95,7 +95,7 @@ def render_agent_timeline(state: WorkflowState) -> None:
     if state.current_stage == WorkflowStage.COMPLETED:
         current_idx = len(timeline_items)
 
-    cols = st.columns(len(timeline_items))
+    nodes = []
     for i, (name, stage) in enumerate(timeline_items):
         if i < current_idx:
             icon = "✓"
@@ -116,16 +116,21 @@ def render_agent_timeline(state: WorkflowState) -> None:
                 status = "Active"
         else:
             icon = "○"
-            color = "#94a3b8"
+            color = "#64748b"
             status = "Pending"
 
-        with cols[i]:
-            short_name = name.replace(" Agent", "").replace(" Checkpoint", "")
-            st.markdown(
-                f"""<div style="text-align:center;padding:8px 4px;border-top:3px solid {color};background:#f8fafc;border-radius:4px;">
-                <div style="font-size:16px;color:{color};font-weight:bold;">{icon}</div>
-                <div style="font-size:11px;font-weight:600;color:#0f172a;margin-top:2px;">{short_name}</div>
-                <div style="font-size:10px;color:#64748b;">{status}</div>
-                </div>""",
-                unsafe_allow_html=True,
-            )
+        short_name = name.replace(" Agent", "").replace(" Checkpoint", "")
+        nodes.append(
+            f"""<div style="flex:0 0 110px;min-width:110px;text-align:center;padding:10px 6px;border-top:3px solid {color};background:rgba(18,28,46,0.85);border:1px solid rgba(41,53,78,0.7);border-top:3px solid {color};border-radius:8px;">
+            <div style="font-size:16px;color:{color};font-weight:bold;">{icon}</div>
+            <div style="font-size:11px;font-weight:600;color:#e2e8f0;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;" title="{name}">{short_name}</div>
+            <div style="font-size:10px;color:#94a3b8;margin-top:1px;">{status}</div>
+            </div>"""
+        )
+
+    st.markdown(
+        f"""<div style="display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:8px;scrollbar-width:thin;">
+        {''.join(nodes)}
+        </div>""",
+        unsafe_allow_html=True,
+    )
